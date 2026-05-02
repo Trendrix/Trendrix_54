@@ -973,6 +973,11 @@
                 grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
                 gap: 1.5rem;
             }
+            body[data-layout-mode="compact"] .posts-grid,
+            body[data-layout-mode="medium"] .posts-grid,
+            body[data-layout-mode="full"] .posts-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            }
 
             .post-actions {
                 flex-direction: column;
@@ -1018,6 +1023,11 @@
             .posts-grid {
                 grid-template-columns: 1fr;
                 gap: 1.25rem;
+            }
+            body[data-layout-mode="compact"] .posts-grid,
+            body[data-layout-mode="medium"] .posts-grid,
+            body[data-layout-mode="full"] .posts-grid {
+                grid-template-columns: 1fr;
             }
 
             .products-grid {
