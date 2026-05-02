@@ -826,6 +826,11 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 1rem;
       }
+      body[data-layout-mode="compact"] .product-grid,
+      body[data-layout-mode="medium"] .product-grid,
+      body[data-layout-mode="full"] .product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
       .card-body  { padding: 0.75rem 0.9rem 1rem; }
       .card-name  { font-size: 0.82rem; }
       .buy-btn    { font-size: 0.78rem; padding: 0.56rem 0.8rem; }
@@ -835,6 +840,11 @@
     @media (max-width: 400px) {
       .main-content { padding: 0 0.75rem 3rem; }
       .product-grid { gap: 0.75rem; }
+      body[data-layout-mode="compact"] .product-grid,
+      body[data-layout-mode="medium"] .product-grid,
+      body[data-layout-mode="full"] .product-grid {
+        gap: 0.75rem;
+      }
       .card-name { font-size: 0.78rem; line-height: 1.35; }
       .source-badge { font-size: 0.58rem; padding: 3px 8px; }
     }
