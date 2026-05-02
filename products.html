@@ -616,33 +616,19 @@
       to   { transform: scale(1); opacity: 1; }
     }
 
-    /* Wishlist button */
-    .card-wish {
-      position: absolute; top: 10px; left: 10px;
-      width: 34px; height: 34px; border-radius: 50%;
-      background: rgba(255,252,248,0.88);
-      backdrop-filter: blur(10px);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; border: none;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      transition: background 0.2s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    .product-id-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
       z-index: 2;
-    }
-    .card-wish:hover { background: #fff; transform: scale(1.2); }
-    .card-wish:active { transform: scale(0.9); }
-    .card-wish svg {
-      width: 16px; height: 16px;
-      fill: none; stroke: #c0607a; stroke-width: 2;
-      transition: fill 0.2s, transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    }
-    .card-wish.liked svg { fill: #c0607a; transform: scale(1.15); }
-    /* Heart burst animation */
-    .card-wish.liked { animation: heartBurst 0.4s cubic-bezier(0.34,1.56,0.64,1); }
-    @keyframes heartBurst {
-      0%  { transform: scale(1); }
-      40% { transform: scale(1.35); }
-      70% { transform: scale(0.9); }
-      100%{ transform: scale(1); }
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(4px);
     }
 
     /* Card body */
@@ -971,13 +957,8 @@
               onload="this.previousElementSibling.style.display='none';this.previousElementSibling.previousElementSibling.style.display='none';"
               onerror="this.style.display='none';"
             />
+            <span class="product-id-badge">#${esc(product.id)}</span>
             <span class="source-badge" style="${badge}">${esc(source||"Shop")}</span>
-            <button class="card-wish" aria-label="Add to wishlist"
-                    onclick="toggleWish(this)" title="Add to wishlist">
-              <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-            </button>
           </div>
           <div class="card-body">
             <span class="card-category">${esc(category||"")}</span>
@@ -1031,15 +1012,33 @@
 
     /* ── Populate dropdowns ── */
     function populateDropdowns(products) {
-      const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
-      const srcs = [...new Set(products.map(p => p.source).filter(Boolean))].sort();
-      cats.forEach(c => {
-        const o = document.createElement("option");
-        o.value = c; o.textContent = c; categoryFilter.appendChild(o);
+      // Count categories
+      const catCount = {};
+      products.forEach(p => {
+        const c = p.category || p["Category"];
+        if (c) catCount[c] = (catCount[c] || 0) + 1;
       });
-      srcs.forEach(s => {
+      const catsSorted = Object.entries(catCount).sort((a,b) => b[1] - a[1]).map(e => e[0]);
+
+      // Count sources (platforms)
+      const srcCount = {};
+      products.forEach(p => {
+        const s = p.source || p["Source"];
+        if (s) srcCount[s] = (srcCount[s] || 0) + 1;
+      });
+      const srcsSorted = Object.entries(srcCount).sort((a,b) => b[1] - a[1]).map(e => e[0]);
+
+      catsSorted.forEach(c => {
         const o = document.createElement("option");
-        o.value = s; o.textContent = s; platformFilter.appendChild(o);
+        o.value = c;
+        o.textContent = c + " (" + catCount[c] + ")";
+        categoryFilter.appendChild(o);
+      });
+      srcsSorted.forEach(s => {
+        const o = document.createElement("option");
+        o.value = s;
+        o.textContent = s + " (" + srcCount[s] + ")";
+        platformFilter.appendChild(o);
       });
     }
 
@@ -1077,8 +1076,8 @@
       const cat = categoryFilter.value;
       const src = platformFilter.value;
       const filtered = allProducts.filter(p =>
-        (cat === "all" || p.category === cat) &&
-        (src === "all" || p.source   === src)
+        (cat === "all" || (p.category || p["Category"]) === cat) &&
+        (src === "all" || (p.source || p["Source"]) === src)
       );
       renderProducts(filtered);
     }
@@ -1102,14 +1101,6 @@
           `Couldn't load products. (${err.message || "Unknown error"})`;
       }
     }
-
-    /* ── Wishlist toggle (global for inline onclick) ── */
-    window.toggleWish = function(btn) {
-      btn.classList.toggle("liked");
-      btn.setAttribute("aria-label",
-        btn.classList.contains("liked") ? "Remove from wishlist" : "Add to wishlist");
-      btn.title = btn.classList.contains("liked") ? "Remove from wishlist" : "Add to wishlist";
-    };
 
     /* ── Dust particles (spawned into bg-scene) ── */
     (function spawnDust() {
