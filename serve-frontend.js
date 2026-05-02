@@ -1,0 +1,17 @@
+const express = require("express");
+const path = require("path");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Static site (needed for ES module imports to work)
+app.use(express.static(path.join(__dirname)));
+
+app.get("/", (_req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.listen(PORT, () => {
+  console.log(`Trendrix frontend running at http://localhost:${PORT}`);
+});
+

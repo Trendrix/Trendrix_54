@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinterest Gallery – Trendrix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/shared.css" />
+
+  <script type="importmap">
+    {
+      "imports": {
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+      }
+    }
+  </script>
+
+  <style>
+    /* ===== CSS RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --main:    #5b7a8c;
+      --main-dk: #496878;
+      --bg:      #f7f4f0;
+      --card:    #ffffff;
+      --text:    #2e2e2e;
+      --muted:   #5a5a5a;
+      --radius:  20px;
+      --nav-h:   68px;
+      --shadow:  0 4px 20px rgba(0,0,0,0.08);
+      --shadow-hover: 0 12px 40px rgba(0,0,0,0.16);
+      --transition: 0.25s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #c8d8e0; border-radius: 99px; }
+
+    /* ===== NAVBAR ===== */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      height: var(--nav-h);
+      background: rgba(247, 244, 240, 0.78);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(91, 122, 140, 0.12);
+      display: flex;
+      align-items: center;
+      padding: 0 clamp(16px, 5vw, 48px);
+      gap: 32px;
+    }
+
+    .navbar-brand {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--main);
+      letter-spacing: -0.5px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+    .navbar-brand span { color: var(--text); }
+
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+      list-style: none;
+    }
+
+    .navbar-links a {
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--muted);
+      padding: 8px 14px;
+      border-radius: 50px;
+      transition: color var(--transition), background var(--transition);
+    }
+    .navbar-links a:hover,
+    .navbar-links a.active {
+      color: var(--main);
+      background: rgba(91,122,140,0.1);
+    }
+
+    /* Mobile nav toggle */
+    .nav-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      margin-left: auto;
+      padding: 8px;
+      border-radius: 10px;
+      transition: background var(--transition);
+    }
+    .nav-toggle:hover { background: rgba(91,122,140,0.1); }
+    .nav-toggle span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--main);
+      border-radius: 2px;
+      transition: transform var(--transition), opacity var(--transition);
+    }
+
+    @media (max-width: 640px) {
+      .nav-toggle { display: flex; }
+      .navbar-links {
+        display: none;
+        position: fixed;
+        top: var(--nav-h);
+        left: 0; right: 0;
+        flex-direction: column;
+        background: rgba(247,244,240,0.97);
+        backdrop-filter: blur(18px);
+        border-bottom: 1px solid rgba(91,122,140,0.12);
+        padding: 16px;
+        gap: 4px;
+        margin-left: 0;
+      }
+      .navbar-links.open { display: flex; }
+      .navbar-links a { padding: 12px 16px; border-radius: 14px; font-size: 0.95rem; }
+    }
+
+    /* ===== PAGE HERO ===== */
+    .page-hero {
+      text-align: center;
+      padding: 64px clamp(16px, 5vw, 48px) 40px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .page-hero .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(91,122,140,0.12);
+      color: var(--main);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 6px 16px;
+      border-radius: 50px;
+      margin-bottom: 20px;
+    }
+
+    .page-hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -1px;
+      line-height: 1.1;
+    }
+    .page-hero h1 span { color: var(--main); }
+
+    .page-hero p {
+      margin-top: 14px;
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    /* ===== FILTER TABS ===== */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 0 clamp(16px, 5vw, 48px) 40px;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .filter-btn {
+      padding: 8px 20px;
+      border-radius: 50px;
+      border: 1.5px solid rgba(91,122,140,0.25);
+      background: transparent;
+      color: var(--muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .filter-btn:hover {
+      border-color: var(--main);
+      color: var(--main);
+      background: rgba(91,122,140,0.07);
+    }
+    .filter-btn.active {
+      background: var(--main);
+      color: #fff;
+      border-color: var(--main);
+      box-shadow: 0 4px 14px rgba(91,122,140,0.35);
+    }
+
+    /* ===== MAIN GRID AREA ===== */
+    .grid-section {
+      padding: 0 clamp(12px, 4vw, 48px) 80px;
+    }
+
+    /* ===== LOADING STATE ===== */
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      padding: 80px 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(91,122,140,0.2);
+      border-top-color: var(--main);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+    }
+    .empty-state .emoji { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h3 { font-size: 1.1rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { font-size: 0.9rem; }
+
+    .error-state {
+      text-align: center;
+      padding: 80px 20px;
+      color: #c0392b;
+    }
+    .error-state .emoji { font-size: 3rem; margin-bottom: 16px; }
+    .error-state h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+    .error-state p { font-size: 0.88rem; color: var(--muted); }
+
+    /* ===== MASONRY GRID ===== */
+    .pin-grid {
+      columns: 4 260px;
+      column-gap: 16px;
+    }
+
+    @media (max-width: 900px) { .pin-grid { columns: 3 200px; } }
+    @media (max-width: 640px) { .pin-grid { columns: 2 160px; column-gap: 10px; } }
+    @media (max-width: 380px) { .pin-grid { columns: 1; } }
+
+    /* ===== PIN CARD ===== */
+    .pin-card {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      cursor: pointer;
+      position: relative;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.4s ease;
+    }
+    .pin-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .pin-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-hover);
+    }
+
+    .pin-card img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
+      transition: brightness 0.3s ease, transform 0.4s ease;
+    }
+    .pin-card:hover img {
+      brightness: 0.92;
+      transform: scale(1.03);
+    }
+
+    .pin-card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.38) 0%, transparent 55%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: flex-end;
+      padding: 16px;
+    }
+    .pin-card:hover .pin-card-overlay { opacity: 1; }
+
+    .pin-card-type {
+      background: rgba(255,255,255,0.9);
+      color: var(--main);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 50px;
+    }
+
+    /* ===== MODAL BACKDROP ===== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(18, 20, 26, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+    }
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* ===== MODAL CONTAINER ===== */
+    .modal-container {
+      background: var(--card);
+      border-radius: 28px;
+      width: 100%;
+      max-width: 780px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+      transform: scale(0.9) translateY(20px);
+      opacity: 0;
+      transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease;
+      scrollbar-width: thin;
+      scrollbar-color: #c8d8e0 transparent;
+    }
+    .modal-backdrop.open .modal-container {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 640px) {
+      .modal-backdrop { padding: 12px; align-items: flex-end; }
+      .modal-container {
+        border-radius: 24px 24px 20px 20px;
+        max-height: 92vh;
+      }
+    }
+
+    /* ===== MODAL CLOSE ===== */
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.55);
+      border: none;
+      color: #fff;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--transition), transform var(--transition);
+      line-height: 1;
+    }
+    .modal-close:hover {
+      background: #e74c3c;
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    /* ===== MODAL IMAGE ===== */
+    .modal-image-wrap {
+      background: #f0ede8;
+      border-radius: 20px 20px 0 0;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      max-height: 55vh;
+      min-height: 220px;
+    }
+    .modal-image-wrap img {
+      width: 100%;
+      height: 100%;
+      max-height: 55vh;
+      object-fit: contain;
+      display: block;
+    }
+
+    @media (max-width: 640px) {
+      .modal-image-wrap { max-height: 42vmax; min-height: 180px; }
+      .modal-image-wrap img { max-height: 42vmax; }
+    }
+
+    /* ===== MODAL BODY ===== */
+    .modal-body {
+      padding: 28px 28px 32px;
+    }
+    @media (max-width: 480px) { .modal-body { padding: 20px 16px 28px; } }
+
+    .modal-pin-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .modal-pin-type {
+      background: rgba(91,122,140,0.12);
+      color: var(--main);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 50px;
+    }
+
+    /* ===== SHOP THE LOOK ===== */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(91,122,140,0.15);
+    }
+
+    .products-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .product-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg);
+      border-radius: 14px;
+      padding: 10px 14px 10px 10px;
+      min-width: 180px;
+      max-width: 240px;
+      flex: 1 1 180px;
+      transition: box-shadow var(--transition), transform var(--transition);
+    }
+    .product-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.1); transform: translateY(-2px); }
+
+    .product-thumb {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #e8e4df;
+    }
+    .product-thumb-placeholder {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #dde8ed, #c8d8e0);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .product-info { flex: 1; min-width: 0; }
+    .product-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .buy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--main);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 50px;
+      text-decoration: none;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      letter-spacing: 0.02em;
+    }
+    .buy-btn:hover { background: var(--main-dk); box-shadow: 0 4px 12px rgba(91,122,140,0.4); }
+    .buy-btn:active { transform: scale(0.97); }
+
+    .no-products {
+      text-align: center;
+      padding: 24px;
+      background: var(--bg);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 32px;
+    }
+    .no-products .icon { font-size: 1.8rem; margin-bottom: 8px; }
+
+    .products-loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 32px;
+    }
+    .mini-spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(91,122,140,0.2);
+      border-top-color: var(--main);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ===== MORE LIKE THIS ===== */
+    .related-scroll {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .related-scroll::-webkit-scrollbar { height: 4px; }
+
+    .related-pin {
+      flex-shrink: 0;
+      width: 110px;
+      height: 110px;
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      scroll-snap-align: start;
+      transition: transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .related-pin:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+    .related-pin img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: brightness 0.3s ease;
+    }
+    .related-pin:hover img { filter: brightness(0.88); }
+
+    @media (max-width: 480px) {
+      .related-pin { width: 90px; height: 90px; }
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: #fff;
+      border-top: 1px solid rgba(91,122,140,0.1);
+      padding: 40px clamp(16px, 5vw, 48px);
+      text-align: center;
+    }
+
+    .footer-brand {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--main);
+      margin-bottom: 8px;
+    }
+    .footer-tagline {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-style: italic;
+    }
+    .footer-links {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      list-style: none;
+    }
+    .footer-links a {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 4px 10px;
+      border-radius: 50px;
+      transition: color var(--transition), background var(--transition);
+    }
+    .footer-links a:hover { color: var(--main); background: rgba(91,122,140,0.08); }
+
+    .footer-copy {
+      font-size: 0.78rem;
+      color: #aaa;
+    }
+
+    /* ===== KEYFRAMES ===== */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ===== SKELETON CARDS (loading placeholders) ===== */
+    .skeleton-grid {
+      columns: 4 260px;
+      column-gap: 16px;
+    }
+    @media (max-width: 900px) { .skeleton-grid { columns: 3 200px; } }
+    @media (max-width: 640px) { .skeleton-grid { columns: 2 160px; column-gap: 10px; } }
+
+    .skeleton-card {
+      break-inside: avoid;
+      margin-bottom: 16px;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: linear-gradient(90deg, #e8e4de 0%, #f0ece6 50%, #e8e4de 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+
+    /* ===== SCROLL TO TOP ===== */
+    .scroll-top {
+      position: fixed;
+      bottom: 28px;
+      right: 24px;
+      z-index: 800;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--main);
+      color: #fff;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(91,122,140,0.4);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity var(--transition), transform var(--transition), background var(--transition);
+      pointer-events: none;
+    }
+    .scroll-top.visible { opacity: 1; transform: translateY(0); pointer-events: all; }
+    .scroll-top:hover { background: var(--main-dk); }
+  </style>
+</head>
+<body>
+
+  <!-- Shared Navigation -->
+  <div id="txNavHost"></div>
+
+  <!-- ===== HERO ===== -->
+  <section class="page-hero tx-page-pad">
+    <div class="pill">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12c0 5.084 3.163 9.426 7.627 11.174-.105-.949-.2-2.405.042-3.441.218-.937 1.407-5.965 1.407-5.965s-.359-.719-.359-1.782c0-1.668.967-2.914 2.171-2.914 1.023 0 1.518.769 1.518 1.69 0 1.029-.655 2.568-.994 3.995-.283 1.194.599 2.169 1.777 2.169 2.133 0 3.772-2.249 3.772-5.495 0-2.873-2.064-4.882-5.012-4.882-3.414 0-5.418 2.561-5.418 5.207 0 1.031.397 2.138.893 2.738a.36.36 0 0 1 .083.345l-.333 1.36c-.053.22-.174.267-.402.161-1.499-.698-2.436-2.889-2.436-4.649 0-3.785 2.75-7.262 7.929-7.262 4.163 0 7.398 2.967 7.398 6.931 0 4.136-2.607 7.464-6.227 7.464-1.216 0-2.359-.632-2.75-1.378l-.748 2.853c-.271 1.043-1.002 2.35-1.492 3.146C9.57 23.812 10.763 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/></svg>
+      Pinterest Gallery
+    </div>
+    <h1>Explore <span>Moodboards</span>,<br>Shop the Style</h1>
+    <p>Curated fashion pins and shoppable looks, all in one beautiful gallery.</p>
+  </section>
+
+  <!-- ===== FILTER BAR ===== -->
+  <div class="filter-bar tx-first-content" id="filterBar">
+    <button class="filter-btn active" data-type="all">✨ All</button>
+    <!-- Dynamic types injected here -->
+  </div>
+
+  <!-- ===== GRID SECTION ===== -->
+  <main class="grid-section" id="gridSection">
+    <!-- Skeleton loading placeholders -->
+    <div id="loadingState">
+      <div class="skeleton-grid" id="skeletonGrid"></div>
+      <div style="text-align:center; margin-top: 24px;" class="loading-state">
+        <div class="spinner"></div>
+        <span>Loading inspiring pins…</span>
+      </div>
+    </div>
+
+    <div id="errorState" style="display:none" class="error-state">
+      <div class="emoji">😕</div>
+      <h3>Couldn't load pins</h3>
+      <p id="errorMsg">Something went wrong. Please refresh the page.</p>
+    </div>
+
+    <div id="emptyState" style="display:none" class="empty-state">
+      <div class="emoji">📌</div>
+      <h3>No pins available yet.</h3>
+      <p>Come back soon for fresh inspiration!</p>
+    </div>
+
+    <div class="pin-grid" id="pinGrid" style="display:none"></div>
+  </main>
+
+  <!-- ===== MODAL ===== -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-label="Pin detail">
+    <div class="modal-container" id="modalContainer">
+      <button class="modal-close" id="modalClose" aria-label="Close modal">&#x2715;</button>
+
+      <div class="modal-image-wrap" id="modalImageWrap">
+        <img id="modalImage" src="" alt="" />
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-pin-meta">
+          <span class="modal-pin-type" id="modalPinType">–</span>
+        </div>
+
+        <!-- Shop the Look -->
+        <div class="section-title">🛍️ Shop the Look</div>
+        <div id="productsArea">
+          <div class="products-loading" id="productsLoading">
+            <div class="mini-spinner"></div>
+            <span>Finding linked products…</span>
+          </div>
+          <div class="products-row" id="productsRow" style="display:none"></div>
+          <div class="no-products" id="noProducts" style="display:none">
+            <div class="icon">🪡</div>
+            <div>No products linked to this pin yet.</div>
+          </div>
+          <div class="no-products" id="productsError" style="display:none">
+            <div class="icon">⚠️</div>
+            <div>Could not load products. Please try again.</div>
+          </div>
+        </div>
+
+        <!-- More Like This -->
+        <div class="section-title" style="margin-top:8px">📌 More Like This</div>
+        <div id="relatedArea">
+          <div class="related-scroll" id="relatedRow"></div>
+          <div class="no-products" id="noRelated" style="display:none">
+            <div class="icon">🔍</div>
+            <div>No related pins found.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SCROLL TO TOP ===== -->
+  <button class="scroll-top" id="scrollTopBtn" aria-label="Scroll to top">↑</button>
+
+  <!-- ===== FOOTER ===== -->
+  <div id="txFooterHost"></div>
+
+  <!-- ===== FIREBASE + APP LOGIC ===== -->
+  <script type="module">
+    // ── Firebase Config ─────────────────────────────────────────────────────────
+    import {
+      collection, getDocs, query, where, doc, getDoc
+    } from 'firebase/firestore';
+    import { db } from './firebase-config.js';
+    import { mountSharedNav } from './assets/shared-nav.js';
+    mountSharedNav({ active: 'pinterest.html' });
+
+    // ── State ────────────────────────────────────────────────────────────────────
+    let allPins        = [];
+    let filteredPins   = [];
+    let currentFilter  = 'all';
+    let currentPinId   = null;
+    const DEMO_MODE    = false;
+
+    // ── Demo Data (shown when Firebase not configured) ───────────────────────────
+    const DEMO_PINS = [
+      { pintId:'p1', type:'Outfit',    image:'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&q=80', altImage:'' },
+      { pintId:'p2', type:'Accessory', image:'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=600&q=80', altImage:'' },
+      { pintId:'p3', type:'Trend',     image:'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&q=80', altImage:'' },
+      { pintId:'p4', type:'Outfit',    image:'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600&q=80', altImage:'' },
+      { pintId:'p5', type:'Accessory', image:'https://images.unsplash.com/photo-1611923973528-9212d7f6e19f?w=600&q=80', altImage:'' },
+      { pintId:'p6', type:'Trend',     image:'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=80', altImage:'' },
+      { pintId:'p7', type:'Outfit',    image:'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=600&q=80', altImage:'' },
+      { pintId:'p8', type:'Accessory', image:'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=600&q=80', altImage:'' },
+      { pintId:'p9', type:'Trend',     image:'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?w=600&q=80', altImage:'' },
+      { pintId:'p10',type:'Outfit',    image:'https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=600&q=80', altImage:'' },
+      { pintId:'p11',type:'Accessory', image:'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&q=80', altImage:'' },
+      { pintId:'p12',type:'Trend',     image:'https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=600&q=80', altImage:'' },
+    ];
+
+    const DEMO_PRODUCTS = [
+      { productId:'prod1', name:'Floral Wrap Dress',    thumbnail:'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=200&q=60', affiliateLink:'#' },
+      { productId:'prod2', name:'Boho Sunhat',           thumbnail:'https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=200&q=60', affiliateLink:'#' },
+      { productId:'prod3', name:'Gold Hoop Earrings',    thumbnail:'https://images.unsplash.com/photo-1611923973528-9212d7f6e19f?w=200&q=60', affiliateLink:'#' },
+      { productId:'prod4', name:'Linen Blazer',          thumbnail:'https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=200&q=60', affiliateLink:'#' },
+    ];
+
+    const DEMO_MAP = {
+      p1: ['prod1','prod4'],
+      p2: ['prod2','prod3'],
+      p3: ['prod1'],
+      p4: ['prod4'],
+      p5: ['prod3'],
+    };
+
+    // ── Skeleton builder ──────────────────────────────────────────────────────────
+    function buildSkeletons() {
+      const grid = document.getElementById('skeletonGrid');
+      const heights = [220,180,260,200,240,190,210,230,170,250,200,220];
+      grid.innerHTML = heights.map(h =>
+        `<div class="skeleton-card" style="height:${h}px"></div>`
+      ).join('');
+    }
+
+    // ── Fetch Pins ────────────────────────────────────────────────────────────────
+    async function fetchPins() {
+      const snap = await getDocs(collection(db, 'Pinterest'));
+      const pins = snap.docs.map(d => ({ pintId: d.id, ...d.data() }));
+      pins.sort((a, b) => String(a.pintId).localeCompare(String(b.pintId)));
+      return pins;
+    }
+
+    // ── Fetch Products for a Pin ──────────────────────────────────────────────────
+    async function fetchProductsForPin(pintId) {
+      // Get pintProductMap entries for this pintId
+      const mapSnap = await getDocs(
+        query(collection(db, 'PIPR MAP'), where('Pint ID', '==', pintId))
+      );
+      const productIds = mapSnap.docs.map(d => d.data()['Product ID']).filter(Boolean);
+      if (!productIds.length) return [];
+
+      // Fetch each product
+      const productPromises = productIds.map(pid =>
+        getDoc(doc(db, 'Product', pid)).then(s => s.exists() ? { productId: s.id, ...s.data() } : null)
+      );
+      const results = await Promise.all(productPromises);
+      return results.filter(Boolean);
+    }
+
+    // ── Filter helpers ────────────────────────────────────────────────────────────
+    function getTypes(pins) {
+      return [...new Set(pins.map(p => p.type).filter(Boolean))].sort();
+    }
+
+    function applyFilter(type) {
+      currentFilter = type;
+      filteredPins = type === 'all' ? [...allPins] : allPins.filter(p => p.type === type);
+      renderGrid(filteredPins);
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === type);
+      });
+    }
+
+    // ── Build Filter Tabs ─────────────────────────────────────────────────────────
+    function buildFilters(pins) {
+      const bar = document.getElementById('filterBar');
+      const types = getTypes(pins);
+      const typeEmojis = { Outfit:'👗', Accessory:'💍', Trend:'🔥' };
+
+      types.forEach(type => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-btn';
+        btn.dataset.type = type;
+        btn.textContent = `${typeEmojis[type] || '✦'} ${type}`;
+        btn.addEventListener('click', () => applyFilter(type));
+        bar.appendChild(btn);
+      });
+
+      document.querySelector('.filter-btn[data-type="all"]')
+        .addEventListener('click', () => applyFilter('all'));
+    }
+
+    // ── Render Grid ───────────────────────────────────────────────────────────────
+    function renderGrid(pins) {
+      const grid = document.getElementById('pinGrid');
+      grid.style.display = 'block';
+      grid.innerHTML = '';
+
+      if (!pins.length) {
+        grid.style.display = 'none';
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+      }
+      document.getElementById('emptyState').style.display = 'none';
+
+      pins.forEach((pin, i) => {
+        const card = document.createElement('div');
+        card.className = 'pin-card';
+        card.dataset.pintId = pin.pintId;
+
+        const imgSrc = pin['Link'] || pin.link || pin.image || pin.altImage || `https://picsum.photos/seed/${pin.pintId}/400/500`;
+        const aspectHeights = [100, 115, 130, 100, 120, 110]; // % variation
+        const aspectH = aspectHeights[i % aspectHeights.length];
+
+        card.innerHTML = `
+          <img src="${imgSrc}" alt="${pin['Alt Image'] || pin.altImage || pin.type || 'Pinterest pin'}"
+               loading="lazy" style="aspect-ratio:${i%3===0?'3/4':i%3===1?'1/1':'4/5'}"
+               onerror="this.src='https://picsum.photos/seed/${pin.pintId}x/400/500'" />
+          <div class="pin-card-overlay">
+            <span class="pin-card-type">${pin['Type'] || pin.type || 'Pin'}</span>
+          </div>
+        `;
+
+        card.addEventListener('click', () => openModal(pin));
+        grid.appendChild(card);
+
+        // Staggered entrance animation via Intersection Observer
+        setTimeout(() => {
+          const observer = new IntersectionObserver(entries => {
+            entries.forEach(e => {
+              if (e.isIntersecting) {
+                e.target.classList.add('visible');
+                observer.unobserve(e.target);
+              }
+            });
+          }, { threshold: 0.05 });
+          observer.observe(card);
+        }, i * 60);
+      });
+    }
+
+    // ── Modal ─────────────────────────────────────────────────────────────────────
+    async function openModal(pin) {
+      currentPinId = pin.pintId;
+      const backdrop = document.getElementById('modalBackdrop');
+
+      // Set image
+      const imgSrc = pin['Link'] || pin.link || pin.image || pin.altImage || `https://picsum.photos/seed/${pin.pintId}/800/600`;
+      const modalImg = document.getElementById('modalImage');
+      modalImg.src = imgSrc;
+      modalImg.alt = pin['Alt Image'] || pin.altImage || pin['Type'] || pin.type || 'Pin';
+      modalImg.onerror = function(){ this.src = `https://picsum.photos/seed/${pin.pintId}x/800/600`; };
+
+      // Set type
+      document.getElementById('modalPinType').textContent = pin['Type'] || pin.type || 'Pin';
+
+      // Reset product/related areas
+      resetProductArea();
+      resetRelatedArea();
+
+      // Open backdrop (animate in)
+      backdrop.classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      // Scroll modal to top
+      document.getElementById('modalContainer').scrollTop = 0;
+
+      // Load products async
+      loadProducts(pin.pintId);
+
+      // Load related
+      loadRelated(pin);
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById('modalBackdrop');
+      backdrop.classList.remove('open');
+      document.body.style.overflow = '';
+      currentPinId = null;
+      // Small delay then clear image src to avoid flash
+      setTimeout(() => {
+        document.getElementById('modalImage').src = '';
+      }, 280);
+    }
+
+    function resetProductArea() {
+      document.getElementById('productsLoading').style.display = 'flex';
+      document.getElementById('productsRow').style.display = 'none';
+      document.getElementById('noProducts').style.display = 'none';
+      document.getElementById('productsError').style.display = 'none';
+      document.getElementById('productsRow').innerHTML = '';
+    }
+
+    function resetRelatedArea() {
+      document.getElementById('relatedRow').innerHTML = '';
+      document.getElementById('noRelated').style.display = 'none';
+    }
+
+    async function loadProducts(pintId) {
+      try {
+        const products = await fetchProductsForPin(pintId);
+
+        document.getElementById('productsLoading').style.display = 'none';
+
+        if (!products.length) {
+          document.getElementById('noProducts').style.display = 'block';
+          return;
+        }
+
+        const row = document.getElementById('productsRow');
+        row.style.display = 'flex';
+        row.innerHTML = products.map(p => `
+          <div class="product-card">
+            ${p.thumbnail
+              ? `<img class="product-thumb" src="${p.thumbnail}" alt="${p.name || ''}" onerror="this.style.display='none'" />`
+              : `<div class="product-thumb-placeholder">🛍️</div>`
+            }
+            <div class="product-info">
+              <div class="product-name" title="${p.name || ''}">${p.name || 'Product'}</div>
+              <a class="buy-btn" href="${p.affiliateLink || '#'}" target="_blank" rel="noopener noreferrer">
+                Buy <span>→</span>
+              </a>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Products error:', err);
+        document.getElementById('productsLoading').style.display = 'none';
+        document.getElementById('productsError').style.display = 'block';
+      }
+    }
+
+    function loadRelated(pin) {
+      const relatedRow = document.getElementById('relatedRow');
+      const pinType = pin['Type'] || pin.type;
+      const same    = allPins.filter(p => p.pintId !== pin.pintId && (p['Type'] || p.type) === pinType);
+      const others  = allPins.filter(p => p.pintId !== pin.pintId && (p['Type'] || p.type) !== pinType);
+
+      // shuffle others
+      const shuffled = others.sort(() => 0.5 - Math.random());
+      const related  = [...same, ...shuffled].slice(0, 10);
+
+      if (!related.length) {
+        document.getElementById('noRelated').style.display = 'block';
+        return;
+      }
+
+      relatedRow.innerHTML = related.map(p => {
+        const src = p['Link'] || p.link || p.image || p.altImage || `https://picsum.photos/seed/${p.pintId}/200/200`;
+        return `
+          <div class="related-pin" data-pint-id="${p.pintId}" title="${p['Type'] || p.type || ''}">
+            <img src="${src}" alt="${p['Alt Image'] || p.altImage || p['Type'] || p.type || 'Pin'}"
+                 loading="lazy"
+                 onerror="this.src='https://picsum.photos/seed/${p.pintId}x/200/200'" />
+          </div>
+        `;
+      }).join('');
+
+      relatedRow.querySelectorAll('.related-pin').forEach(el => {
+        el.addEventListener('click', () => {
+          const pid  = el.dataset.pintId;
+          const pobj = allPins.find(p => p.pintId === pid);
+          if (pobj) openModal(pobj);
+        });
+      });
+    }
+
+    // ── Init ──────────────────────────────────────────────────────────────────────
+    async function init() {
+      buildSkeletons();
+
+      try {
+        allPins = await fetchPins();
+
+        // Hide loading
+        document.getElementById('loadingState').style.display = 'none';
+
+        if (!allPins.length) {
+          document.getElementById('emptyState').style.display = 'block';
+          return;
+        }
+
+        // Build filter tabs
+        buildFilters(allPins);
+
+        // Render all pins
+        filteredPins = [...allPins];
+        renderGrid(filteredPins);
+
+      } catch (err) {
+        console.error('Firebase error:', err);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display  = 'block';
+        document.getElementById('errorMsg').textContent =
+          `😬 ${err.message || 'Something went wrong. Please refresh.'}`;
+      }
+    }
+
+    // ── Event Listeners ───────────────────────────────────────────────────────────
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+
+    document.getElementById('modalBackdrop').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // Scroll to top
+    const scrollTopBtn = document.getElementById('scrollTopBtn');
+    window.addEventListener('scroll', () => {
+      scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+    scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+    // ── Start ──────────────────────────────────────────────────────────────────────
+    init();
+  </script>
+</body>
+</html>
