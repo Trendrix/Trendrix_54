@@ -300,9 +300,31 @@
       padding: 6px 14px;
     }
 
-    @media (max-width: 900px) { .pin-grid { columns: 3 200px; } }
-    @media (max-width: 640px) { .pin-grid { columns: 2 160px; column-gap: 10px; } }
-    @media (max-width: 380px) { .pin-grid { columns: 1; } }
+    @media (max-width: 900px) {
+      .pin-grid { columns: 3 200px; }
+      body[data-layout-mode="compact"] .pin-grid,
+      body[data-layout-mode="medium"] .pin-grid,
+      body[data-layout-mode="full"] .pin-grid {
+        columns: 3 200px;
+      }
+    }
+    @media (max-width: 640px) {
+      .pin-grid { columns: 2 160px; column-gap: 10px; }
+      body[data-layout-mode="compact"] .pin-grid,
+      body[data-layout-mode="medium"] .pin-grid,
+      body[data-layout-mode="full"] .pin-grid {
+        columns: 2 160px;
+        column-gap: 10px;
+      }
+    }
+    @media (max-width: 380px) {
+      .pin-grid { columns: 1; }
+      body[data-layout-mode="compact"] .pin-grid,
+      body[data-layout-mode="medium"] .pin-grid,
+      body[data-layout-mode="full"] .pin-grid {
+        columns: 1;
+      }
+    }
 
     /* ===== PIN CARD ===== */
     .pin-card {
