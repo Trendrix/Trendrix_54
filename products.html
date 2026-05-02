@@ -391,6 +391,10 @@
     .filter-group {
       flex: 1; min-width: 180px; max-width: 300px; position: relative;
     }
+    .filter-group.search-group {
+      min-width: 260px;
+      max-width: 420px;
+    }
     .filter-group label {
       display: block;
       font-size: 0.70rem; font-weight: 700;
@@ -421,6 +425,27 @@
       transform: translateY(-1px);
     }
     .filter-group select:hover {
+      border-color: rgba(180,155,110,0.55);
+    }
+    .filter-group input[type="search"] {
+      width: 100%;
+      padding: 0.72rem 1.05rem;
+      border: 1.5px solid rgba(180,155,110,0.28);
+      border-radius: 14px;
+      background: rgba(255,252,248,0.85);
+      backdrop-filter: blur(12px);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem; font-weight: 500;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+    }
+    .filter-group input[type="search"]:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,169,110,0.15);
+      transform: translateY(-1px);
+    }
+    .filter-group input[type="search"]:hover {
       border-color: rgba(180,155,110,0.55);
     }
     .results-count {
@@ -749,6 +774,7 @@
       .hamburger  { display: flex; }
       .filters    { flex-direction: column; }
       .filter-group { min-width: 100%; max-width: 100%; }
+      .filter-group.search-group { min-width: 100%; max-width: 100%; }
       .results-count { margin-left: 0; }
       .product-grid  {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -819,6 +845,17 @@
   ══════════════════════════════════════════════════════ -->
   <section class="filters-wrap reveal tx-first-content" aria-label="Filter products">
     <div class="filters">
+      <div class="filter-group search-group">
+        <label for="searchFilter">Search Products</label>
+        <input
+          id="searchFilter"
+          type="search"
+          inputmode="search"
+          autocomplete="off"
+          placeholder="Search by ID, name, category, source..."
+          aria-label="Search products"
+        />
+      </div>
       <div class="filter-group">
         <label for="categoryFilter">Sort by Category</label>
         <select id="categoryFilter" aria-label="Filter by category">
@@ -899,6 +936,7 @@
     const errorMsg         = document.getElementById("errorMsg");
     const categoryFilter   = document.getElementById("categoryFilter");
     const platformFilter   = document.getElementById("platformFilter");
+    const searchFilter     = document.getElementById("searchFilter");
     const resultsCount     = document.getElementById("resultsCount");
 
     let allProducts = [];
@@ -929,6 +967,136 @@
     }
     function escA(str) {
       return String(str||"").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+    }
+
+    function pickFirstValue(product, keys) {
+      for (const key of keys) {
+        const value = product[key];
+        if (value !== undefined && value !== null && String(value).trim() !== "") {
+          return value;
+        }
+      }
+      return "";
+    }
+
+    function normalizeForSearch(value) {
+      return String(value || "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s#]+/g, " ")
+        .replace(/_/g, " ")
+        .replace(/\s+/g, " ");
+    }
+
+    function normalizeIdValue(value) {
+      return String(value || "")
+        .toLowerCase()
+        .trim()
+        .replace(/^#+/, "")
+        .replace(/[^a-z0-9]/g, "");
+    }
+
+    function collapseRepeatedLetters(value) {
+      return String(value || "").replace(/([a-z])\1{2,}/g, "$1$1");
+    }
+
+    function getRelaxedToken(value) {
+      return collapseRepeatedLetters(value).replace(/th/g, "t");
+    }
+
+    function tokenizeForSearch(value) {
+      return normalizeForSearch(value).split(" ").filter(Boolean);
+    }
+
+    function getSearchFields(product) {
+      const id = pickFirstValue(product, ["id", "ID", "productId", "Product ID", "product_id"]);
+      const name = pickFirstValue(product, ["Product Name", "productName", "name", "Name", "title", "Title"]);
+      const category = pickFirstValue(product, ["Category", "category"]);
+      const source = pickFirstValue(product, ["Source", "source", "Platform", "platform"]);
+      const description = pickFirstValue(product, ["Description", "description", "details", "Details"]);
+      const tagsRaw = pickFirstValue(product, ["tags", "Tags"]);
+      const tags = Array.isArray(tagsRaw) ? tagsRaw.join(" ") : String(tagsRaw || "");
+      return { id, name, category, source, description, tags };
+    }
+
+    function buildSearchIndex(product) {
+      const fields = getSearchFields(product);
+      const searchableText = [
+        fields.id,
+        fields.name,
+        fields.category,
+        fields.source,
+        fields.description,
+        fields.tags,
+      ].join(" ");
+      const normalized = normalizeForSearch(searchableText);
+      const tokens = tokenizeForSearch(searchableText);
+      const relaxedTokens = tokens.map(getRelaxedToken);
+      const idNorm = normalizeIdValue(fields.id);
+      return { normalized, tokens, relaxedTokens, idNorm };
+    }
+
+    function levenshteinDistance(a, b) {
+      if (a === b) return 0;
+      if (!a.length) return b.length;
+      if (!b.length) return a.length;
+      const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+      const curr = new Array(b.length + 1).fill(0);
+      for (let i = 1; i <= a.length; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          curr[j] = Math.min(
+            prev[j] + 1,
+            curr[j - 1] + 1,
+            prev[j - 1] + cost
+          );
+        }
+        for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+      }
+      return prev[b.length];
+    }
+
+    function isConservativeFuzzyMatch(queryToken, candidateToken) {
+      const a = getRelaxedToken(queryToken);
+      const b = getRelaxedToken(candidateToken);
+      if (!a || !b) return false;
+      if (a === b || b.includes(a) || a.includes(b)) return true;
+      const maxLen = Math.max(a.length, b.length);
+      if (maxLen < 5) return false;
+      if (Math.abs(a.length - b.length) > 2) return false;
+      const distance = levenshteinDistance(a, b);
+      const similarity = 1 - (distance / maxLen);
+      const threshold = maxLen >= 9 ? 0.72 : 0.76;
+      const maxDistance = maxLen >= 9 ? 3 : 2;
+      return similarity >= threshold && distance <= maxDistance;
+    }
+
+    function matchesSearchQuery(product, rawQuery) {
+      const query = normalizeForSearch(rawQuery);
+      if (!query) return true;
+
+      const index = buildSearchIndex(product);
+      if (!index.normalized) return false;
+
+      const idQuery = normalizeIdValue(rawQuery);
+      if (idQuery && index.idNorm && index.idNorm.includes(idQuery)) return true;
+
+      if (index.normalized.includes(query)) return true;
+
+      const queryTokens = query.split(" ").filter(Boolean);
+      if (!queryTokens.length) return true;
+      if (queryTokens.every(token => index.tokens.some(candidate => candidate.includes(token)))) {
+        return true;
+      }
+
+      const relaxedQuery = getRelaxedToken(query);
+      const relaxedText = getRelaxedToken(index.normalized);
+      if (relaxedQuery && relaxedText.includes(relaxedQuery)) return true;
+
+      return queryTokens.every(token =>
+        index.tokens.some(candidate => isConservativeFuzzyMatch(token, candidate))
+      );
     }
 
     /* ── Render one card ── */
@@ -1075,9 +1243,11 @@
     function applyFilters() {
       const cat = categoryFilter.value;
       const src = platformFilter.value;
+      const query = searchFilter.value;
       const filtered = allProducts.filter(p =>
         (cat === "all" || (p.category || p["Category"]) === cat) &&
-        (src === "all" || (p.source || p["Source"]) === src)
+        (src === "all" || (p.source || p["Source"]) === src) &&
+        matchesSearchQuery(p, query)
       );
       renderProducts(filtered);
     }
@@ -1127,6 +1297,7 @@
     /* ── Event listeners ── */
     categoryFilter.addEventListener("change", applyFilters);
     platformFilter.addEventListener("change", applyFilters);
+    searchFilter.addEventListener("input", applyFilters);
 
     /* ── Boot ── */
     initScrollReveal();
