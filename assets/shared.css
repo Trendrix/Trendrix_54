@@ -172,8 +172,6 @@ body{background:var(--tx-bg);color:var(--tx-text)}
   letter-spacing:.01em;
   cursor:pointer;
   transition:background .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
-  min-height:34px;
-  white-space:nowrap;
 }
 .tx-layout-btn:hover{
   color:var(--tx-main);
@@ -190,18 +188,9 @@ body{background:var(--tx-bg);color:var(--tx-text)}
     justify-content:center;
     padding:0 16px 14px;
   }
-  .tx-layout-switch{
-    display:grid;
-    grid-template-columns:repeat(3,minmax(0,1fr));
-    width:min(100%,420px);
-    border-radius:16px;
-    gap:6px;
-    padding:6px;
-  }
   .tx-layout-btn{
-    font-size:.74rem;
-    padding:8px 10px;
-    text-align:center;
+    font-size:.72rem;
+    padding:6px 10px;
   }
 }
 
