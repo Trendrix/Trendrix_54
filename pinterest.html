@@ -190,6 +190,9 @@
       padding: 0 clamp(16px, 5vw, 48px) 40px;
       animation: fadeUp 0.6s 0.1s ease both;
     }
+    .layout-mode-pinterest {
+      padding: 0 clamp(16px, 5vw, 48px) 22px;
+    }
 
     .filter-btn {
       padding: 8px 20px;
@@ -264,6 +267,37 @@
     .pin-grid {
       columns: 4 260px;
       column-gap: 16px;
+    }
+    body[data-layout-mode="compact"] .pin-grid {
+      columns: 5 210px;
+      column-gap: 12px;
+    }
+    body[data-layout-mode="compact"] .pin-card {
+      margin-bottom: 12px;
+      border-radius: 16px;
+    }
+    body[data-layout-mode="compact"] .pin-card-overlay {
+      padding: 12px;
+    }
+    body[data-layout-mode="compact"] .pin-card-type {
+      font-size: 0.62rem;
+      padding: 3px 8px;
+    }
+
+    body[data-layout-mode="full"] .pin-grid {
+      columns: 3 320px;
+      column-gap: 20px;
+    }
+    body[data-layout-mode="full"] .pin-card {
+      margin-bottom: 20px;
+      border-radius: 24px;
+    }
+    body[data-layout-mode="full"] .pin-card-overlay {
+      padding: 20px;
+    }
+    body[data-layout-mode="full"] .pin-card-type {
+      font-size: 0.82rem;
+      padding: 6px 14px;
     }
 
     @media (max-width: 900px) { .pin-grid { columns: 3 200px; } }
@@ -728,6 +762,9 @@
     <button class="filter-btn active" data-type="all">✨ All</button>
     <!-- Dynamic types injected here -->
   </div>
+  <div class="tx-layout-control-wrap layout-mode-pinterest">
+    <div id="layoutModeHost"></div>
+  </div>
 
   <!-- ===== GRID SECTION ===== -->
   <main class="grid-section" id="gridSection">
@@ -814,7 +851,14 @@
     } from 'firebase/firestore';
     import { db } from './firebase-config.js';
     import { mountSharedNav } from './assets/shared-nav.js';
+    import { initLayoutMode } from './assets/layout-mode.mjs';
     mountSharedNav({ active: 'pinterest.html' });
+    initLayoutMode({
+      hostId: 'layoutModeHost',
+      storageKey: 'trendrix:layout:pinterest',
+      target: document.body,
+      defaultMode: 'medium'
+    });
 
     // ── State ────────────────────────────────────────────────────────────────────
     let allPins        = [];
