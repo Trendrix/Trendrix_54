@@ -26,7 +26,7 @@
   </script>
 
   <style>
-       .pag-btn {
+    .pag-btn {
      padding: 0.5rem 1rem;
      border: 1.5px solid var(--main);
      background: white;
@@ -412,6 +412,10 @@
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 clamp(1rem, 4vw, 2.5rem) 1rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
     .filters {
       display: flex; gap: 1rem;
@@ -484,6 +488,32 @@
       padding-bottom: 0.7rem;
       transition: opacity 0.3s;
     }
+
+    /* Toggle button for random/ordered */
+    .toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      background: rgba(255,252,248,0.8);
+      backdrop-filter: blur(10px);
+      border: 1.5px solid rgba(180,155,110,0.3);
+      border-radius: 30px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--main-dark);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 2px 12px rgba(91,80,60,0.08);
+    }
+    .toggle-btn:hover {
+      background: rgba(255,252,248,1);
+      border-color: var(--gold);
+      box-shadow: 0 4px 18px rgba(201,169,110,0.2);
+      transform: translateY(-1px);
+    }
+    .toggle-btn:active { transform: scale(0.97); }
 
     /* ══════════════════════════════════════════════════════
        MAIN CONTENT
@@ -986,6 +1016,7 @@
   </section>
   <div class="tx-layout-control-wrap layout-mode-products">
     <div id="layoutModeHost"></div>
+    <button id="orderToggleBtn" class="toggle-btn" aria-label="Toggle product order">🔀 Random</button>
   </div>
 
   <!-- ══════════════════════════════════════════════════════
@@ -1061,8 +1092,10 @@
     const platformFilter   = document.getElementById("platformFilter");
     const searchFilter     = document.getElementById("searchFilter");
     const resultsCount     = document.getElementById("resultsCount");
+    const orderToggleBtn   = document.getElementById("orderToggleBtn");
 
     let allProducts = [];
+    let randomOrder = true;   // default: random
 
     /* ── Badge color map ── */
     const BADGE_COLORS = {
@@ -1348,101 +1381,112 @@
     }
 
     /* ── Render grid ── */
-   
-       const PRODUCTS_PER_PAGE = 24;
-   let currentPage = 1;
-   let currentFiltered = [];
+    const PRODUCTS_PER_PAGE = 24;
+    let currentPage = 1;
+    let currentFiltered = [];
 
-   function renderProducts(products) {
-     currentFiltered = products;   // store the full filtered list for pagination
+    function renderProducts(products) {
+      currentFiltered = products;   // store the full filtered list for pagination
 
-     if (allProducts.length === 0) {
-       showState("empty");
-       resultsCount.textContent = "";
-       currentPage = 1;
-       return;
-     }
-     if (products.length === 0) {
-       showState("filterEmpty");
-       resultsCount.textContent = "0 results";
-       currentPage = 1;
-       return;
-     }
+      if (allProducts.length === 0) {
+        showState("empty");
+        resultsCount.textContent = "";
+        currentPage = 1;
+        return;
+      }
+      if (products.length === 0) {
+        showState("filterEmpty");
+        resultsCount.textContent = "0 results";
+        currentPage = 1;
+        return;
+      }
 
-     // Calculate pagination boundaries
-     const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
-     const safePage = Math.min(currentPage, totalPages);
-     const start = (safePage - 1) * PRODUCTS_PER_PAGE;
-     const pageProducts = products.slice(start, start + PRODUCTS_PER_PAGE);
+      // Calculate pagination boundaries
+      const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+      const safePage = Math.min(currentPage, totalPages);
+      const start = (safePage - 1) * PRODUCTS_PER_PAGE;
+      const pageProducts = products.slice(start, start + PRODUCTS_PER_PAGE);
 
-     // Render the current page’s cards
-     productGrid.innerHTML = pageProducts.map((p, i) => renderCard(p, i + start)).join("");
-     showState("grid");
-     animateCards();
+      // Render the current page’s cards
+      productGrid.innerHTML = pageProducts.map((p, i) => renderCard(p, i + start)).join("");
+      showState("grid");
+      animateCards();
 
-     const total = products.length;
-     resultsCount.textContent = products.length === allProducts.length
-       ? `${total} item${total !== 1 ? "s" : ""}`
-       : `${products.length} of ${allProducts.length} items`;
+      const total = products.length;
+      resultsCount.textContent = products.length === allProducts.length
+        ? `${total} item${total !== 1 ? "s" : ""}`
+        : `${products.length} of ${allProducts.length} items`;
 
-     // Build / refresh pagination buttons
-     renderPagination(totalPages, safePage, total);
+      // Build / refresh pagination buttons
+      renderPagination(totalPages, safePage, total);
     }
 
     function renderPagination(totalPages, current, totalItems) {
-     // Find or create a container for pagination buttons
-     let pagEl = document.getElementById("paginationContainer");
-     if (!pagEl) {
-       pagEl = document.createElement("div");
-       pagEl.id = "paginationContainer";
-       pagEl.style.cssText = "display:flex; gap:0.5rem; justify-content:center; margin-top:1.5rem; flex-wrap:wrap;";
-       productGrid.parentNode.appendChild(pagEl);
-     }
+      // Find or create a container for pagination buttons
+      let pagEl = document.getElementById("paginationContainer");
+      if (!pagEl) {
+        pagEl = document.createElement("div");
+        pagEl.id = "paginationContainer";
+        pagEl.style.cssText = "display:flex; gap:0.5rem; justify-content:center; margin-top:1.5rem; flex-wrap:wrap;";
+        productGrid.parentNode.appendChild(pagEl);
+      }
 
-     // If only one page, don't show any buttons
-     if (totalPages <= 1) {
-       pagEl.innerHTML = "";
-       return;
-     }
+      // If only one page, don't show any buttons
+      if (totalPages <= 1) {
+        pagEl.innerHTML = "";
+        return;
+      }
 
-     // Build the button HTML
-     let html = "";
-     html += `<button class="pag-btn" data-page="1" ${current === 1 ? "disabled" : ""}>First</button>`;
-     html += `<button class="pag-btn" data-page="${Math.max(1, current - 1)}" ${current === 1 ? "disabled" : ""}>Prev</button>`;
+      // Build the button HTML
+      let html = "";
+      html += `<button class="pag-btn" data-page="1" ${current === 1 ? "disabled" : ""}>First</button>`;
+      html += `<button class="pag-btn" data-page="${Math.max(1, current - 1)}" ${current === 1 ? "disabled" : ""}>Prev</button>`;
 
-     // Show at most 5 page numbers around the current page
-     for (let p = Math.max(1, current - 2); p <= Math.min(totalPages, current + 2); p++) {
-       html += `<button class="pag-btn" data-page="${p}" ${p === current ? "disabled" : ""}>${p}</button>`;
-     }
+      // Show at most 5 page numbers around the current page
+      for (let p = Math.max(1, current - 2); p <= Math.min(totalPages, current + 2); p++) {
+        html += `<button class="pag-btn" data-page="${p}" ${p === current ? "disabled" : ""}>${p}</button>`;
+      }
 
-     html += `<button class="pag-btn" data-page="${Math.min(totalPages, current + 1)}" ${current === totalPages ? "disabled" : ""}>Next</button>`;
-     html += `<button class="pag-btn" data-page="${totalPages}" ${current === totalPages ? "disabled" : ""}>Last</button>`;
+      html += `<button class="pag-btn" data-page="${Math.min(totalPages, current + 1)}" ${current === totalPages ? "disabled" : ""}>Next</button>`;
+      html += `<button class="pag-btn" data-page="${totalPages}" ${current === totalPages ? "disabled" : ""}>Last</button>`;
 
-     pagEl.innerHTML = html;
+      pagEl.innerHTML = html;
 
-     // Add click listeners to each button
-     pagEl.querySelectorAll(".pag-btn").forEach(btn => {
-       btn.addEventListener("click", () => {
-         const page = parseInt(btn.dataset.page);
-         if (!isNaN(page)) {
-           currentPage = page;
-           renderProducts(currentFiltered);
-           window.scrollTo({ top: productGrid.offsetTop - 100, behavior: "smooth" });
-         }
-       });
-     });
-   }
- 
-    /* ── Filter ── */
+      // Add click listeners to each button
+      pagEl.querySelectorAll(".pag-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const page = parseInt(btn.dataset.page);
+          if (!isNaN(page)) {
+            currentPage = page;
+            renderProducts(currentFiltered);
+            window.scrollTo({ top: productGrid.offsetTop - 100, behavior: "smooth" });
+          }
+        });
+      });
+    }
+
+    /* ── Filter (with random/order logic) ── */
     function applyFilters() {
       const cat = categoryFilter.value;
       const src = platformFilter.value;
       const query = searchFilter.value;
-      const filtered = allProducts.filter(p =>
+      let filtered = allProducts.filter(p =>
         (cat === "all" || (p.category || p["Category"]) === cat) &&
         (src === "all" || (p.source || p["Source"]) === src) &&
         matchesSearchQuery(p, query)
       );
+
+      // Apply random or ordered sorting
+      if (randomOrder) {
+        // Fisher–Yates shuffle
+        for (let i = filtered.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+        }
+      } else {
+        filtered.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+      }
+
       renderProducts(filtered);
     }
 
@@ -1453,14 +1497,9 @@
         const snap = await getDocs(collection(db, "Product"));
         if (snap.empty) { allProducts = []; renderProducts([]); return; }
         allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Shuffle randomly (Fisher–Yates)
-        for (let i = allProducts.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-           [allProducts[i], allProducts[j]] = [allProducts[j], allProducts[i]];
-        }
-        allProducts.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+        // Do NOT shuffle or sort here – ordering handled by applyFilters
         populateDropdowns(allProducts);
-        renderProducts(allProducts);
+        applyFilters();   // uses default randomOrder = true
       } catch (err) {
         console.error("Firestore:", err);
         showState("error");
@@ -1493,7 +1532,14 @@
       }
     })();
 
-    /* ── Event listeners ── */
+    /* ── Toggle button handler ── */
+    orderToggleBtn.addEventListener("click", () => {
+      randomOrder = !randomOrder;
+      orderToggleBtn.textContent = randomOrder ? "🔀 Random" : "📋 Ordered";
+      applyFilters();
+    });
+
+    /* ── Event listeners for other filters ── */
     categoryFilter.addEventListener("change", applyFilters);
     platformFilter.addEventListener("change", applyFilters);
     searchFilter.addEventListener("input", applyFilters);
