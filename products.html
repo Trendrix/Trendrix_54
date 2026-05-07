@@ -26,6 +26,24 @@
   </script>
 
   <style>
+       .pag-btn {
+     padding: 0.5rem 1rem;
+     border: 1.5px solid var(--main);
+     background: white;
+     color: var(--main);
+     border-radius: 8px;
+     font-weight: 600;
+     cursor: pointer;
+     font-size: 0.85rem;
+   }
+   .pag-btn:hover:not(:disabled) {
+     background: var(--main);
+     color: white;
+   }
+   .pag-btn:disabled {
+     opacity: 0.5;
+     cursor: default;
+   }
     /* ══════════════════════════════════════════════════════
        CSS VARIABLES
     ══════════════════════════════════════════════════════ */
@@ -1330,20 +1348,91 @@
     }
 
     /* ── Render grid ── */
-    function renderProducts(products) {
-      if (allProducts.length === 0) { showState("empty"); resultsCount.textContent = ""; return; }
-      if (products.length === 0)    { showState("filterEmpty"); resultsCount.textContent = "0 results"; return; }
+   
+       const PRODUCTS_PER_PAGE = 24;
+   let currentPage = 1;
+   let currentFiltered = [];
 
-      productGrid.innerHTML = products.map((p,i) => renderCard(p,i)).join("");
-      showState("grid");
-      animateCards();
+   function renderProducts(products) {
+     currentFiltered = products;   // store the full filtered list for pagination
 
-      const total = allProducts.length;
-      resultsCount.textContent = products.length === total
-        ? `${total} item${total !== 1 ? "s" : ""}`
-        : `${products.length} of ${total} items`;
+     if (allProducts.length === 0) {
+       showState("empty");
+       resultsCount.textContent = "";
+       currentPage = 1;
+       return;
+     }
+     if (products.length === 0) {
+       showState("filterEmpty");
+       resultsCount.textContent = "0 results";
+       currentPage = 1;
+       return;
+     }
+
+     // Calculate pagination boundaries
+     const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+     const safePage = Math.min(currentPage, totalPages);
+     const start = (safePage - 1) * PRODUCTS_PER_PAGE;
+     const pageProducts = products.slice(start, start + PRODUCTS_PER_PAGE);
+
+     // Render the current page’s cards
+     productGrid.innerHTML = pageProducts.map((p, i) => renderCard(p, i + start)).join("");
+     showState("grid");
+     animateCards();
+
+     const total = products.length;
+     resultsCount.textContent = products.length === allProducts.length
+       ? `${total} item${total !== 1 ? "s" : ""}`
+       : `${products.length} of ${allProducts.length} items`;
+
+     // Build / refresh pagination buttons
+     renderPagination(totalPages, safePage, total);
     }
 
+    function renderPagination(totalPages, current, totalItems) {
+     // Find or create a container for pagination buttons
+     let pagEl = document.getElementById("paginationContainer");
+     if (!pagEl) {
+       pagEl = document.createElement("div");
+       pagEl.id = "paginationContainer";
+       pagEl.style.cssText = "display:flex; gap:0.5rem; justify-content:center; margin-top:1.5rem; flex-wrap:wrap;";
+       productGrid.parentNode.appendChild(pagEl);
+     }
+
+     // If only one page, don't show any buttons
+     if (totalPages <= 1) {
+       pagEl.innerHTML = "";
+       return;
+     }
+
+     // Build the button HTML
+     let html = "";
+     html += `<button class="pag-btn" data-page="1" ${current === 1 ? "disabled" : ""}>First</button>`;
+     html += `<button class="pag-btn" data-page="${Math.max(1, current - 1)}" ${current === 1 ? "disabled" : ""}>Prev</button>`;
+
+     // Show at most 5 page numbers around the current page
+     for (let p = Math.max(1, current - 2); p <= Math.min(totalPages, current + 2); p++) {
+       html += `<button class="pag-btn" data-page="${p}" ${p === current ? "disabled" : ""}>${p}</button>`;
+     }
+
+     html += `<button class="pag-btn" data-page="${Math.min(totalPages, current + 1)}" ${current === totalPages ? "disabled" : ""}>Next</button>`;
+     html += `<button class="pag-btn" data-page="${totalPages}" ${current === totalPages ? "disabled" : ""}>Last</button>`;
+
+     pagEl.innerHTML = html;
+
+     // Add click listeners to each button
+     pagEl.querySelectorAll(".pag-btn").forEach(btn => {
+       btn.addEventListener("click", () => {
+         const page = parseInt(btn.dataset.page);
+         if (!isNaN(page)) {
+           currentPage = page;
+           renderProducts(currentFiltered);
+           window.scrollTo({ top: productGrid.offsetTop - 100, behavior: "smooth" });
+         }
+       });
+     });
+   }
+ 
     /* ── Filter ── */
     function applyFilters() {
       const cat = categoryFilter.value;
@@ -1364,6 +1453,11 @@
         const snap = await getDocs(collection(db, "Product"));
         if (snap.empty) { allProducts = []; renderProducts([]); return; }
         allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Shuffle randomly (Fisher–Yates)
+        for (let i = allProducts.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+           [allProducts[i], allProducts[j]] = [allProducts[j], allProducts[i]];
+        }
         allProducts.sort((a, b) => String(a.id).localeCompare(String(b.id)));
         populateDropdowns(allProducts);
         renderProducts(allProducts);
