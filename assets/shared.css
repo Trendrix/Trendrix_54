@@ -225,7 +225,7 @@ body{background:var(--tx-bg);color:var(--tx-text)}
 @media (max-width:768px){
   :root{
     --tx-nav-height:72px;
-    --tx-nav-clearance:34px;
+    --tx-nav-clearance:40px;
     --tx-first-section-gap:20px;
   }
   .tx-back-home{
