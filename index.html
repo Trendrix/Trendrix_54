@@ -15,13 +15,6 @@
   <link rel="stylesheet" href="./assets/shared.css" />
 
   <style>
-    @media (max-width: 768px) {
-  * { max-width: 100vw !important; }
-  .hero-inner { padding: 20px 16px !important; }
-  .hero-right { width: 100%; }
-  .hamburger { cursor: pointer; }
-  .btn-main, .btn-outline, .hero-card, .g-card, .hcard, .stat-chip, .plat-badge, .a-pill { cursor: pointer; }
-}
     body { cursor: auto !important; }
     /* ============================================================
        RESET & ROOT
@@ -49,14 +42,12 @@
       background: var(--bg);
       color: var(--text);
       overflow-x: hidden;
-      
     }
 
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: linear-gradient(var(--main), var(--lilac)); border-radius: 10px; }
 
-    
     /* ============================================================
        NOISE TEXTURE OVERLAY
     ============================================================ */
@@ -154,7 +145,7 @@
 
     .hamburger {
       display: none; flex-direction: column; gap: 5px;
-       padding: 6px; background: none; border: none;
+      padding: 6px; background: none; border: none;
     }
     .hamburger span {
       display: block; width: 26px; height: 2px;
@@ -359,7 +350,7 @@
       background: linear-gradient(135deg, var(--main), var(--main2));
       color: #fff; border: none; border-radius: 50px;
       font-size: 0.88rem; font-weight: 700; letter-spacing: 0.3px;
-      cursor: none; text-decoration: none;
+      cursor: pointer; text-decoration: none;
       position: relative; overflow: hidden;
       box-shadow: 0 8px 28px rgba(91,122,140,0.35);
       transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
@@ -380,7 +371,7 @@
       background: rgba(255,255,255,0.6); backdrop-filter: blur(12px);
       color: var(--main); border: 1.5px solid rgba(91,122,140,0.25);
       border-radius: 50px; font-size: 0.88rem; font-weight: 600;
-      cursor: none; text-decoration: none;
+      cursor: pointer; text-decoration: none;
       transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
       display: inline-flex; align-items: center; gap: 8px;
     }
@@ -410,7 +401,7 @@
     .stat-chip strong { font-size: 1.6rem; font-weight: 900; color: var(--main); letter-spacing: -1px; line-height: 1; }
     .stat-chip span { font-size: 0.65rem; color: #9aabb6; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
 
-    /* ---- CENTER IMAGE STACK (replaces 3D model) ---- */
+    /* ---- CENTER IMAGE STACK ---- */
     .hero-center {
       position: relative;
       display: flex; align-items: center; justify-content: center;
@@ -617,7 +608,7 @@
     .plat-badge {
       display: inline-flex; align-items: center; gap: 7px;
       padding: 9px 18px; border-radius: 50px; font-size: 0.78rem; font-weight: 700;
-      border: 1.5px solid; cursor: none;
+      border: 1.5px solid; cursor: pointer;
       transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.3s;
     }
     .plat-badge:hover { transform: translateY(-4px); }
@@ -633,8 +624,6 @@
     .pb-ajio:hover  { box-shadow: 0 8px 24px rgba(224,96,161,0.2); }
     .pb-myntra:hover  { box-shadow: 0 8px 24px rgba(224,123,48,0.2); }
     .pb-Shopsy:hover{ box-shadow: 0 8px 24px rgba(40,116,240,0.2); }
-    
-    
 
     /* Stats band */
     .stats-band {
@@ -733,7 +722,7 @@
       border: 1px solid rgba(91,122,140,0.07);
       transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1),
                   box-shadow 0.5s ease;
-      cursor: none;
+      cursor: pointer;
     }
     .g-card:hover { transform: translateY(-14px) scale(1.02); box-shadow: 0 30px 70px rgba(91,122,140,0.18); }
 
@@ -788,7 +777,7 @@
       background: rgba(255,255,255,0.88); backdrop-filter: blur(8px);
       border-radius: 50%; border: none;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1rem; cursor: none;
+      font-size: 1rem; cursor: pointer;
       transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s;
     }
     .g-heart:hover { transform: scale(1.2); background: white; }
@@ -832,7 +821,7 @@
     .hcard {
       width: 200px; height: 260px; flex-shrink: 0;
       border-radius: 18px; overflow: hidden;
-      position: relative; cursor: none;
+      position: relative; cursor: pointer;
       box-shadow: 0 4px 20px rgba(91,122,140,0.1);
       transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.4s;
     }
@@ -893,7 +882,7 @@
       width: 42px; height: 42px;
       background: rgba(91,122,140,0.07); border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; text-decoration: none; cursor: none;
+      font-size: 1.1rem; text-decoration: none; cursor: pointer;
       transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
       border: 1px solid rgba(91,122,140,0.1);
     }
@@ -965,19 +954,70 @@
       .gallery-grid { grid-template-columns: repeat(2,1fr); gap: 12px; }
       .g-card.wide { grid-column: span 1; }
       .model-tag { display: none; }
+
+      /* ---- FIX: Hero image stack responsiveness ---- */
+      .model-stage {
+        width: 100% !important;
+        min-height: auto !important;
+        height: auto;
+      }
+      .model-glow {
+        width: 80vw;
+        height: 80vw;
+      }
+      .image-stack {
+        width: 90%;
+        max-width: 390px;
+        height: auto;
+        aspect-ratio: 390 / 520;
+      }
+      .stack-card {
+        position: absolute;
+        width: 60%;
+        max-width: 250px;
+        height: auto;
+        aspect-ratio: 250 / 360;
+      }
+      .stack-1 { left: 5%; top: 10%; transform: rotate(-10deg); }
+      .stack-2 { right: 5%; top: 15%; transform: rotate(10deg); }
+      /* ensure images scale nicely */
+      .stack-card img {
+        object-fit: contain;
+      }
+      /* disable float animations on small screens to prevent overlap issues */
+      .stack-1, .stack-2 {
+        animation: none;
+      }
+      /* recenter the stack container */
+      .hero-center {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
     }
     @media (max-width: 480px) {
       .hero-inner { padding: 20px 16px 50px; }
       .gallery-grid { grid-template-columns: 1fr; }
       .hero-card { min-width: 100%; }
       .hero-right { flex-direction: column; }
+
+      /* further scaling for very small screens */
+      .model-stage {
+        width: 100% !important;
+      }
+      .image-stack {
+        width: 95%;
+      }
+      .stack-1, .stack-2 {
+        width: 60%;
+      }
     }
   </style>
 </head>
 <body>
 
 <!-- ────────────────────────────────────────
-     NAV
+     NAV (will be mounted by shared-nav.js)
 ──────────────────────────────────────── -->
 <div id="txNavHost"></div>
 
@@ -1135,11 +1175,10 @@
         <div class="platform-row reveal d1">
           <span class="plat-badge pb-meesho">Meesho</span>
           <span class="plat-badge pb-amazon">Amazon</span>
-          <span class="plat-badge pb-flipkart"> Flipkart</span>
-           <span class="plat-badge pb-ajio"> Ajio</span>
-          <span class="plat-badge pb-Shopsy"> Shopsy</span>
-          <span class="plat-badge pb-myntra"> Myntra</span>
-          
+          <span class="plat-badge pb-flipkart">Flipkart</span>
+          <span class="plat-badge pb-ajio">Ajio</span>
+          <span class="plat-badge pb-Shopsy">Shopsy</span>
+          <span class="plat-badge pb-myntra">Myntra</span>
         </div>
 
         <div class="stats-band reveal d2">
@@ -1309,20 +1348,12 @@
       <div class="hcard"><img src="https://images.unsplash.com/photo-1521577352947-9bb58764b69a?w=400&q=80" alt="Look 7" loading="lazy"/><div class="hcard-label">Festive Look</div></div>
       <div class="hcard"><img src="https://images.unsplash.com/photo-1519058082700-08a0b56da9b4?w=400&q=80" alt="Look 8" loading="lazy"/><div class="hcard-label">Work Wear</div></div>
       <!-- Duplicated for seamless loop -->
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400&q=80" alt="Look 1" loading="lazy"/><div class="hcard-label">Ethnic Tops</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?w=400&q=80" alt="Look 2" loading="lazy"/><div class="hcard-label">Denim Edit</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&q=80" alt="Look 3" loading="lazy"/><div class="hcard-label">Summer Vibes</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&q=80" alt="Look 4" loading="lazy"/><div class="hcard-label">Pastel Coord</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1495121605193-b116b5b9c5fe?w=400&q=80" alt="Look 5" loading="lazy"/><div class="hcard-label">Boho Edit</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&q=80" alt="Look 6" loading="lazy"/><div class="hcard-label">Street Style</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1521577352947-9bb58764b69a?w=400&q=80" alt="Look 7" loading="lazy"/><div class="hcard-label">Festive Look</div></div>
-      <div class="hcard"><img src="https://images.unsplash.com/photo-1519058082700-08a0b56da9b4?w=400&q=80" alt="Look 8" loading="lazy"/><div class="hcard-label">Work Wear</div></div>
     </div>
   </div>
 </div>
 
 <!-- ────────────────────────────────────────
-     FOOTER
+     FOOTER (mounted by shared-footer.js)
 ──────────────────────────────────────── -->
 <div id="txFooterHost"></div>
 
@@ -1334,7 +1365,6 @@
   mountSharedNav({ active: "index.html" });
 </script>
 <script>
-  
   /* ── Spawn Particles ── */
   const pw = document.getElementById('particlesWrap');
   const pColors = ['#c5dde9','#ddd0ee','#f5d9c8','#c8e8d4','#fde68a','#fda4af','#a8c5d6'];
