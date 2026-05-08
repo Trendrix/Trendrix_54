@@ -47,6 +47,30 @@
     .pagination button { padding:0.3rem 0.6rem; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer; }
     .pagination button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
     .pagination button:disabled { opacity:0.5; cursor:default; }
+
+    /* Link wizard modal */
+    .modal-overlay {
+      position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; z-index: 2000;
+    }
+    .modal-box {
+      background: white; border-radius: 16px; padding: 1.5rem;
+      max-width: 700px; width: 95%; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    .modal-box h2 { margin-bottom:1rem; color: #5b7a8c; }
+    .parent-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+    .parent-item {
+      background: #f0f4f7; border-radius: 8px; padding: 0.6rem 1rem;
+      cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .parent-item:hover { background: #e2e8f0; }
+    .parent-item.selected { outline: 2px solid #5b7a8c; background: #e6eff3; }
+    .product-check-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
+    .product-check-item { display: flex; align-items: center; gap: 0.5rem; }
+    .product-check-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
+    .product-check-item label { font-size: 0.9rem; }
+    .link-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
   </style>
 </head>
 <body>
@@ -81,6 +105,13 @@
     </div>
   </div>
   <div class="toast" id="toast"></div>
+</div>
+
+<!-- LINK WIZARD MODAL -->
+<div id="linkWizardModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div id="linkWizardContent"></div>
+  </div>
 </div>
 
 <script type="importmap">
@@ -122,7 +153,9 @@
     },
     piprMap: {
       name: "PIPR MAP",
-      fields: ["Pint ID","Product ID"]
+      fields: ["Pint ID","Product ID"],
+      parentCollection: "Pinterest",
+      parentIdField: "Pint ID"
     },
     instagram: {
       name: "Instagram",
@@ -130,15 +163,16 @@
     },
     inprMap: {
       name: "INPR MAP",
-      fields: ["INSTA ID","Product ID"]
+      fields: ["INSTA ID","Product ID"],
+      parentCollection: "Instagram",
+      parentIdField: "INSTA ID"
     },
   };
 
   let currentCollection = "product";
   let currentDocs = [];
-  // Pagination state
   let currentPage = 1;
-  let recordsPerPage = 10;   // default: 10 records per page
+  let recordsPerPage = 10;
 
   const loginScreen = document.getElementById("loginScreen");
   const dashboard = document.getElementById("dashboard");
@@ -148,6 +182,8 @@
   const tableContainer = document.getElementById("tableContainer");
   const toastEl = document.getElementById("toast");
   const tabBar = document.getElementById("tabBar");
+  const linkWizardModal = document.getElementById("linkWizardModal");
+  const linkWizardContent = document.getElementById("linkWizardContent");
 
   // ── Auth ──
   loginBtn.addEventListener("click", async () => {
@@ -214,7 +250,7 @@
     try {
       const snap = await getDocs(collection(db, coll.name));
       currentDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      currentPage = 1; // reset page on collection change
+      currentPage = 1;
       renderTable();
     } catch (err) {
       tableContainer.innerHTML = `<p class="error">Error: ${err.message}</p>`;
@@ -235,12 +271,17 @@
     const coll = collectionsMap[currentCollection];
     const fields = coll.fields;
     if (currentDocs.length === 0) {
-      tableContainer.innerHTML = `<p>No documents yet.</p><button class="btn" id="addRowBtn">➕ Add First Row</button>`;
+      let html = `<p>No documents yet.</p><button class="btn" id="addRowBtn">➕ Add First Row</button>`;
+      // For mapping tables, also show a link wizard button even when empty
+      if (currentCollection === "inprMap" || currentCollection === "piprMap") {
+        html += `<button class="btn small secondary" id="showLinkWizardBtn" style="margin-left:0.5rem;">🛠️ Link Wizard</button>`;
+      }
+      tableContainer.innerHTML = html;
       document.getElementById("addRowBtn")?.addEventListener("click", addRow);
+      document.getElementById("showLinkWizardBtn")?.addEventListener("click", openLinkWizard);
       return;
     }
 
-    // Pagination calculations
     const totalRecords = currentDocs.length;
     const maxPage = Math.ceil(totalRecords / recordsPerPage);
     if (currentPage > maxPage) currentPage = maxPage;
@@ -250,11 +291,11 @@
 
     const uniqueCategories = getUniqueCategories();
 
-    // Build HTML with pagination controls
     let html = `<div class="controls">
       <div>
         <button class="btn small" id="addRowBtn">➕ Add Row</button>
         <button class="btn small secondary" id="showFormBtn" style="margin-left:0.5rem;">📝 Form</button>
+        ${(currentCollection === "inprMap" || currentCollection === "piprMap") ? `<button class="btn small secondary" id="showLinkWizardBtn" style="margin-left:0.5rem;">🛠️ Link Wizard</button>` : ''}
       </div>
       <div style="display:flex; align-items:center; gap:0.3rem;">
         <label style="font-size:0.85rem;">Show:</label>
@@ -274,7 +315,6 @@
     html += `<th></th></tr></thead><tbody>`;
 
     pageDocs.forEach((doc, rowIdx) => {
-      const realRowIdx = startIdx + rowIdx; // for arrow navigation across pages we need global index, but we're only navigating on current page. We'll use data-row as row offset within page.
       html += `<tr data-row="${rowIdx}">`;
       html += `<td class="doc-id-cell" data-col="0">${esc(doc.id)}</td>`;
       fields.forEach((f, colIdx) => {
@@ -288,11 +328,9 @@
     });
     html += `</tbody></table>`;
 
-    // Pagination buttons
     if (recordsPerPage > 0 && totalRecords > recordsPerPage) {
       html += `<div class="pagination">`;
       html += `<button id="prevPageBtn" ${currentPage === 1 ? "disabled" : ""}>Previous</button>`;
-      // Page numbers (show up to 5 pages around current)
       const startPage = Math.max(1, currentPage - 2);
       const endPage = Math.min(maxPage, currentPage + 2);
       if (startPage > 1) html += `<button class="pageBtn" data-page="1">1</button> ...`;
@@ -306,7 +344,7 @@
 
     tableContainer.innerHTML = html;
 
-    // Attach pagination events
+    // Pagination events
     document.getElementById("recordsPerPageSelect")?.addEventListener("change", (e) => {
       recordsPerPage = parseInt(e.target.value);
       currentPage = 1;
@@ -325,7 +363,7 @@
       });
     });
 
-    // Inline edit handlers (same as before)
+    // Inline edit handlers
     tableContainer.querySelectorAll(".editable-cell").forEach(cell => {
       let orig = cell.textContent.trim();
       cell.addEventListener("focus", () => { orig = cell.textContent.trim(); });
@@ -350,12 +388,11 @@
         if (!confirm(`Delete ${btn.dataset.docId}?`)) return;
         await deleteDoc(doc(db, collectionsMap[currentCollection].name, btn.dataset.docId));
         showToast("Deleted");
-        // Reload table (pagination will adjust)
         loadTable();
       });
     });
 
-    // Category dropdown for Product table
+    // Category dropdown (Product only)
     if (currentCollection === "product" && uniqueCategories.length > 0) {
       const datalistId = "categorySuggestionsList";
       let datalistEl = document.getElementById(datalistId);
@@ -395,7 +432,7 @@
       });
     }
 
-    // Arrow-key navigation (page‑local)
+    // Arrow-key navigation
     const table = document.getElementById("data-table");
     if (table) {
       table.addEventListener("keydown", function(e) {
@@ -404,17 +441,14 @@
         const key = e.key;
         if (!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(key)) return;
         e.preventDefault();
-
         const row = parseInt(target.dataset.row);
         const col = parseInt(target.dataset.col);
         if (isNaN(row) || isNaN(col)) return;
-
         let newRow = row, newCol = col;
         if (key === "ArrowUp") newRow = Math.max(0, row - 1);
         if (key === "ArrowDown") newRow = row + 1;
         if (key === "ArrowLeft") newCol = Math.max(1, col - 1);
         if (key === "ArrowRight") newCol = col + 1;
-
         const targetCell = table.querySelector(`tr[data-row="${newRow}"] td[data-col="${newCol}"]`);
         if (targetCell && targetCell.classList.contains("editable-cell")) {
           target.blur();
@@ -425,6 +459,7 @@
 
     document.getElementById("addRowBtn")?.addEventListener("click", addRow);
     document.getElementById("showFormBtn")?.addEventListener("click", showForm);
+    document.getElementById("showLinkWizardBtn")?.addEventListener("click", openLinkWizard);
   }
 
   async function addRow() {
@@ -434,7 +469,7 @@
       await setDoc(doc(db, collectionsMap[currentCollection].name, nextId),
         Object.fromEntries(fields.map(f => [f, ""])));
       showToast(`Added ${nextId}`);
-      loadTable(); // will re‑render table, preserve pagination
+      loadTable();
     } catch (err) {
       showToast("Error: " + err.message);
     }
@@ -466,6 +501,110 @@
       }
     });
   }
+
+  // ── Link Wizard ──
+  function openLinkWizard() {
+    linkWizardModal.classList.remove("hidden");
+    const mappingCollection = collectionsMap[currentCollection];
+    const parentCollectionName = mappingCollection.parentCollection;
+    const parentIdField = mappingCollection.parentIdField; // e.g., "INSTA ID" or "Pint ID"
+
+    linkWizardContent.innerHTML = `<h2>Link Wizard: ${mappingCollection.name}</h2><div class="spinner"></div>`;
+
+    // Step 1: Fetch parent documents and products
+    (async () => {
+      try {
+        // Fetch parent collection (Instagram or Pinterest)
+        const parentSnap = await getDocs(collection(db, parentCollectionName));
+        const parents = parentSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Fetch all products
+        const productSnap = await getDocs(collection(db, "Product"));
+        const products = productSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        // Render step 1: select parent
+        let parentHtml = `<h3>Select a ${parentCollectionName} item</h3>`;
+        parentHtml += `<div class="parent-list">`;
+        parents.forEach(p => {
+          const label = p.id + (p["Type"] ? ` (${p["Type"]})` : "");
+          parentHtml += `<div class="parent-item" data-parent-id="${esc(p.id)}">${esc(label)}</div>`;
+        });
+        parentHtml += `</div>`;
+        parentHtml += `<div id="productSelectionArea" style="display:none;">`;
+        parentHtml += `<h3>Select Products to link</h3>`;
+        parentHtml += `<div class="product-check-list" id="productList"></div>`;
+        parentHtml += `<div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected Products</button></div>`;
+        parentHtml += `</div>`;
+
+        linkWizardContent.innerHTML += parentHtml;
+
+        let selectedParentId = null;
+
+        // Parent click handler
+        document.querySelectorAll(".parent-item").forEach(item => {
+          item.addEventListener("click", () => {
+            document.querySelectorAll(".parent-item").forEach(i => i.classList.remove("selected"));
+            item.classList.add("selected");
+            selectedParentId = item.dataset.parentId;
+
+            // Show product selection
+            const productArea = document.getElementById("productSelectionArea");
+            productArea.style.display = "block";
+            const productList = document.getElementById("productList");
+            productList.innerHTML = products.map(prod => `
+              <div class="product-check-item">
+                <input type="checkbox" id="prod_${esc(prod.id)}" value="${esc(prod.id)}">
+                <img src="${esc(prod["Image Link"] || "")}" onerror="this.style.display='none'" alt="">
+                <label for="prod_${esc(prod.id)}">${esc(prod["Product Name"] || prod.id)}</label>
+              </div>
+            `).join("");
+          });
+        });
+
+        // Link button
+        document.getElementById("linkSelectedBtn")?.addEventListener("click", async () => {
+          if (!selectedParentId) {
+            showToast("Please select a parent first.");
+            return;
+          }
+          const checkboxes = document.querySelectorAll(".product-check-item input[type='checkbox']:checked");
+          if (checkboxes.length === 0) {
+            showToast("Select at least one product.");
+            return;
+          }
+          const selectedProductIds = Array.from(checkboxes).map(cb => cb.value);
+
+          // Create mapping documents
+          try {
+            const collName = collectionsMap[currentCollection].name;
+            for (const productId of selectedProductIds) {
+              // Generate an auto ID for the mapping doc, or you can let Firestore auto-generate
+              const mappingDoc = doc(collection(db, collName));
+              const payload = {
+                [parentIdField]: selectedParentId,
+                "Product ID": productId
+              };
+              await setDoc(mappingDoc, payload);
+            }
+            showToast(`Linked ${selectedProductIds.length} product(s) to ${selectedParentId}`);
+            linkWizardModal.classList.add("hidden");
+            loadTable(); // refresh table
+          } catch (err) {
+            showToast("Error: " + err.message);
+          }
+        });
+      } catch (err) {
+        linkWizardContent.innerHTML += `<p class="error">Error loading data: ${err.message}</p>`;
+      }
+    })();
+  }
+
+  // Close modal on click outside
+  linkWizardModal.addEventListener("click", (e) => {
+    if (e.target === linkWizardModal) {
+      linkWizardModal.classList.add("hidden");
+    }
+  });
 
   // ── Tab switching ──
   tabBar.addEventListener("click", (e) => {
