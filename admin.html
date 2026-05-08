@@ -28,7 +28,7 @@
     th { background:#e9f0f3; padding:0.6rem; text-align:left; font-weight:600; }
     td { padding:0.5rem 0.6rem; border-bottom:1px solid #f0ede8; }
     tr:last-child td { border-bottom:none; }
-    .editable-cell { background:#fcfaf7; min-width:120px; outline:none; }
+    .editable-cell { background:#fcfaf7; min-width:120px; outline:none; position:relative; }
     .editable-cell:focus { background:#fffdf8; outline:2px solid rgba(91,122,140,0.35); }
     .delete-btn { background:#f8d7da; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#b23b3b; font-weight:600; }
     .spinner { width:30px; height:30px; border:3px solid rgba(91,122,140,0.2); border-top-color:#5b7a8c; border-radius:50%; animation:spin 0.8s linear infinite; margin:2rem auto; }
@@ -42,6 +42,40 @@
     .tab-bar { display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:1rem; }
     .tab-bar button { padding:0.5rem 1rem; border:1px solid #ddd; background:#fff; border-radius:20px; cursor:pointer; font-weight:500; }
     .tab-bar button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
+
+    /* Category dropdown styles */
+    .category-input-cell {
+      position: relative;
+    }
+    .category-input-cell input {
+      width: 100%;
+      padding: 0.3rem;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 0.85rem;
+    }
+    .category-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #fff;
+      border: 1px solid #ddd;
+      z-index: 100;
+      max-height: 150px;
+      overflow-y: auto;
+      width: 100%;
+      border-radius: 0 0 5px 5px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: none;
+    }
+    .category-suggestions div {
+      padding: 0.4rem 0.6rem;
+      cursor: pointer;
+    }
+    .category-suggestions div:hover {
+      background: #f0f4f7;
+    }
   </style>
 </head>
 <body>
@@ -91,9 +125,8 @@
   import { initializeApp } from "firebase/app";
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
   import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
-  import { db as existingDb } from "./firebase-config.js";  // reuse your existing db
+  import { db as existingDb } from "./firebase-config.js";
 
-  // Firebase config (client-safe, same as your website)
   const firebaseConfig = {
     apiKey: "AIzaSyCGrnXhgeZpwPVA3-y0UN8UnqvZt_48nMw",
     authDomain: "trendrix-54.firebaseapp.com",
@@ -105,9 +138,8 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = existingDb;  // use the same Firestore instance from your config
+  const db = existingDb;
 
-  // ========== built‑in collections (same as server.js) ==========
   const collectionsMap = {
     product: {
       name: "Product",
@@ -140,10 +172,10 @@
   const loginError = document.getElementById("loginError");
   const logoutBtn = document.getElementById("logoutBtn");
   const tableContainer = document.getElementById("tableContainer");
-  const toast = document.getElementById("toast");
+  const toastEl = document.getElementById("toast");
   const tabBar = document.getElementById("tabBar");
 
-  // ========== Auth ==========
+  // ── Auth ──
   loginBtn.addEventListener("click", async () => {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
@@ -167,14 +199,13 @@
     }
   });
 
-  // ========== Toast ==========
   function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2500);
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(() => toastEl.classList.remove("show"), 2500);
   }
 
-  // ========== Next‑ID logic (same as server.js) ==========
+  // ── Next‑ID logic (unchanged) ──
   async function getNextId() {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
@@ -194,7 +225,6 @@
       }
       prefixCount[p] = (prefixCount[p] || 0) + 1;
     });
-    // Most common prefix
     let bestCount = 0;
     for (const [p, cnt] of Object.entries(prefixCount)) {
       if (cnt > bestCount) { bestCount = cnt; bestPrefix = p; }
@@ -203,7 +233,7 @@
     return bestPrefix + String(maxNum + 1).padStart(bestPad || 1, "0");
   }
 
-  // ========== Load & render table ==========
+  // ── Load & render table ──
   async function loadTable() {
     tableContainer.innerHTML = '<div class="spinner"></div>';
     const coll = collectionsMap[currentCollection];
@@ -216,6 +246,17 @@
     }
   }
 
+  // Build a set of unique existing categories (only for Product table)
+  function getUniqueCategories() {
+    if (currentCollection !== "product" || !currentDocs.length) return [];
+    const cats = new Set();
+    currentDocs.forEach(doc => {
+      const val = (doc["Category"] || "").trim();
+      if (val) cats.add(val);
+    });
+    return Array.from(cats).sort();
+  }
+
   function renderTable() {
     const coll = collectionsMap[currentCollection];
     const fields = coll.fields;
@@ -224,24 +265,32 @@
       document.getElementById("addRowBtn")?.addEventListener("click", addRow);
       return;
     }
+
+    // Unique categories for dropdown (only Product → Category column)
+    const uniqueCategories = getUniqueCategories();
+
     let html = `<button class="btn small" id="addRowBtn">➕ Add Row</button>`;
     html += `<button class="btn small secondary" id="showFormBtn" style="margin-left:0.5rem;">📝 Form</button>`;
-    html += `<table><thead><tr><th>ID</th>`;
+    html += `<table id="data-table"><thead><tr><th>ID</th>`;
     fields.forEach(f => html += `<th>${f}</th>`);
     html += `<th></th></tr></thead><tbody>`;
-    currentDocs.forEach(doc => {
-      html += `<tr>`;
-      html += `<td style="font-weight:600;">${esc(doc.id)}</td>`;
-      fields.forEach(f => {
-        html += `<td class="editable-cell" contenteditable data-doc-id="${esc(doc.id)}" data-field="${f}">${esc(doc[f] || "")}</td>`;
+
+    currentDocs.forEach((doc, rowIdx) => {
+      html += `<tr data-row="${rowIdx}">`;
+      html += `<td class="doc-id-cell" data-col="0">${esc(doc.id)}</td>`;
+      fields.forEach((f, colIdx) => {
+        const col = colIdx + 1; // columns start after ID
+        html += `<td class="editable-cell" contenteditable="true" 
+                    data-col="${col}" data-row="${rowIdx}" 
+                    data-doc-id="${esc(doc.id)}" data-field="${f}">${esc(doc[f] || "")}</td>`;
       });
-      html += `<td><button class="delete-btn" data-doc-id="${esc(doc.id)}">🗑️</button></td>`;
+      html += `<td data-col="${fields.length+1}"><button class="delete-btn" data-doc-id="${esc(doc.id)}">🗑️</button></td>`;
       html += `</tr>`;
     });
     html += `</tbody></table>`;
     tableContainer.innerHTML = html;
 
-    // Inline edit
+    // Inline edit – standard (blur saves)
     tableContainer.querySelectorAll(".editable-cell").forEach(cell => {
       let orig = cell.textContent.trim();
       cell.addEventListener("focus", () => { orig = cell.textContent.trim(); });
@@ -260,29 +309,111 @@
       });
     });
 
-    // Delete
+    // Delete buttons
     tableContainer.querySelectorAll(".delete-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
-        const docId = btn.dataset.docId;
-        if (!confirm(`Delete ${docId}?`)) return;
-        await deleteDoc(doc(db, collectionsMap[currentCollection].name, docId));
+        if (!confirm(`Delete ${btn.dataset.docId}?`)) return;
+        await deleteDoc(doc(db, collectionsMap[currentCollection].name, btn.dataset.docId));
         showToast("Deleted");
         loadTable();
       });
     });
 
+    // ── Category dropdown for Product table ──
+    if (currentCollection === "product" && uniqueCategories.length > 0) {
+      // Add a hidden datalist for autocomplete
+      const datalistId = "categorySuggestionsList";
+      let datalistEl = document.getElementById(datalistId);
+      if (!datalistEl) {
+        datalistEl = document.createElement("datalist");
+        datalistEl.id = datalistId;
+        document.body.appendChild(datalistEl);
+      }
+      datalistEl.innerHTML = uniqueCategories.map(c => `<option value="${esc(c)}">`).join("");
+
+      // Attach focus handler to Category cells
+      const categoryCells = tableContainer.querySelectorAll('[data-field="Category"]');
+      categoryCells.forEach(cell => {
+        // When cell gets focus, convert to input
+        cell.addEventListener("focus", function(e) {
+          // Prevent multiple inputs
+          if (this.querySelector("input")) return;
+          const currentText = this.textContent.trim();
+          const input = document.createElement("input");
+          input.type = "text";
+          input.setAttribute("list", datalistId);
+          input.value = currentText;
+          input.style.width = "100%";
+          input.style.padding = "0.3rem";
+          input.style.border = "1px solid #ccc";
+          input.style.borderRadius = "4px";
+          input.style.fontFamily = "inherit";
+          input.style.fontSize = "0.85rem";
+          this.textContent = "";
+          this.appendChild(input);
+          input.focus();
+
+          // On blur, revert to plain text
+          input.addEventListener("blur", () => {
+            const newVal = input.value.trim();
+            this.textContent = newVal || "";
+            // Trigger original blur handler
+            this.dispatchEvent(new Event("blur", {bubbles: true}));
+          });
+
+          // Prevent cell blur when clicking on input
+          input.addEventListener("mousedown", e => e.stopPropagation());
+        });
+
+        // Prevent cell contenteditable editing when input is inside
+        cell.addEventListener("keydown", function(e) {
+          if (this.querySelector("input")) {
+            e.stopPropagation();
+          }
+        });
+      });
+    }
+
+    // ── Arrow‑key navigation ──
+    const table = document.getElementById("data-table");
+    if (table) {
+      table.addEventListener("keydown", function(e) {
+        const target = e.target;
+        if (!target.classList.contains("editable-cell")) return;
+        const key = e.key;
+        if (!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(key)) return;
+        e.preventDefault();
+
+        const row = parseInt(target.dataset.row);
+        const col = parseInt(target.dataset.col);
+        if (isNaN(row) || isNaN(col)) return;
+
+        let newRow = row, newCol = col;
+        if (key === "ArrowUp") newRow = Math.max(0, row - 1);
+        if (key === "ArrowDown") newRow = row + 1;
+        if (key === "ArrowLeft") newCol = Math.max(1, col - 1);   // skip ID column (col 0)
+        if (key === "ArrowRight") newCol = col + 1;
+
+        // Find the target cell
+        const targetCell = table.querySelector(`tr[data-row="${newRow}"] td[data-col="${newCol}"]`);
+        if (targetCell && targetCell.classList.contains("editable-cell")) {
+          target.blur();  // save current cell via blur
+          targetCell.focus();
+        }
+      });
+    }
+
     document.getElementById("addRowBtn")?.addEventListener("click", addRow);
     document.getElementById("showFormBtn")?.addEventListener("click", showForm);
   }
 
-  // ========== Add Row (with next‑ID) ==========
+  // ── Add Row (unchanged) ──
   async function addRow() {
     const fields = collectionsMap[currentCollection].fields;
     const nextId = await getNextId();
-    const newRow = { id: nextId };
-    fields.forEach(f => newRow[f] = "");
     try {
-      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), Object.fromEntries(fields.map(f => [f, ""])));
+      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId),
+        Object.fromEntries(fields.map(f => [f, ""])));
       showToast(`Added ${nextId}`);
       loadTable();
     } catch (err) {
@@ -290,22 +421,17 @@
     }
   }
 
-  // ========== Simple Form (like server.js add forms) ==========
+  // ── Form (unchanged) ──
   function showForm() {
     const fields = collectionsMap[currentCollection].fields;
-    let formHtml = `<h3>Add ${currentCollection}</h3>`;
-    formHtml += `<div class="form-card">`;
+    let formHtml = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
     formHtml += `<label>Document ID <span style="color:#b23b3b;">*</span></label><input id="formDocId" placeholder="e.g. PA0002" />`;
     fields.forEach(f => {
       formHtml += `<label>${f}</label><input id="form_${f.replace(/\s/g,"_")}" />`;
     });
-    formHtml += `<button class="btn" id="submitFormBtn" style="margin-top:1rem;">💾 Save</button>`;
-    formHtml += `</div>`;
+    formHtml += `<button class="btn" id="submitFormBtn" style="margin-top:1rem;">💾 Save</button></div>`;
     tableContainer.innerHTML = formHtml;
-
-    // Suggest next ID
     getNextId().then(id => { document.getElementById("formDocId").value = id; });
-
     document.getElementById("submitFormBtn").addEventListener("click", async () => {
       const docId = document.getElementById("formDocId").value.trim();
       if (!docId) { showToast("Document ID required"); return; }
@@ -323,7 +449,7 @@
     });
   }
 
-  // ========== Tab switching ==========
+  // ── Tab switching ──
   tabBar.addEventListener("click", (e) => {
     if (e.target.tagName !== "BUTTON") return;
     tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
@@ -337,4 +463,4 @@
   }
 </script>
 </body>
-</html>  
+</html>
