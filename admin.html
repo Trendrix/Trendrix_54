@@ -10,7 +10,7 @@
     .hidden { display:none !important; }
     #loginScreen, #dashboard { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1rem; }
     .card { background:#fff; border-radius:20px; padding:1.5rem; box-shadow:0 6px 20px rgba(0,0,0,0.08); width:100%; max-width:500px; }
-    .wide-card { max-width:950px; }
+    .wide-card { max-width:1050px; }
     h1 { color:#5b7a8c; text-align:center; margin-bottom:1rem; }
     h2 { margin-bottom:0.5rem; }
     input, button, select, textarea { font-family:inherit; }
@@ -23,12 +23,16 @@
     .btn.secondary { background:#6e6e6e; }
     .btn.secondary:hover { background:#555; }
     .top-bar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1.5rem; }
-    select { padding:0.5rem; border-radius:8px; border:1px solid #ddd; }
-    table { width:100%; border-collapse:collapse; margin-top:1rem; font-size:0.85rem; }
-    th { background:#e9f0f3; padding:0.6rem; text-align:left; font-weight:600; }
-    td { padding:0.5rem 0.6rem; border-bottom:1px solid #f0ede8; }
-    tr:last-child td { border-bottom:none; }
-    .editable-cell { background:#fcfaf7; min-width:120px; outline:none; position:relative; }
+    .tab-bar { display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:1rem; }
+    .tab-bar button { padding:0.5rem 1rem; border:1px solid #ddd; background:#fff; border-radius:20px; cursor:pointer; font-weight:500; }
+    .tab-bar button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
+    .controls { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.5rem; }
+    select { padding:0.4rem 0.5rem; border-radius:8px; border:1px solid #ccc; }
+    table { width:100%; border-collapse:collapse; margin-top:0.5rem; font-size:0.85rem; border: 1px solid #d0d7de; }
+    th { background:#e9f0f3; padding:0.6rem; text-align:left; font-weight:600; border: 1px solid #d0d7de; }
+    td { padding:0.5rem 0.6rem; border: 1px solid #d0d7de; }
+    tr:last-child td { border-bottom: 1px solid #d0d7de; }
+    .editable-cell { background:#fcfaf7; min-width:120px; outline:none; position:relative; border: 1px solid #d0d7de; }
     .editable-cell:focus { background:#fffdf8; outline:2px solid rgba(91,122,140,0.35); }
     .delete-btn { background:#f8d7da; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#b23b3b; font-weight:600; }
     .spinner { width:30px; height:30px; border:3px solid rgba(91,122,140,0.2); border-top-color:#5b7a8c; border-radius:50%; animation:spin 0.8s linear infinite; margin:2rem auto; }
@@ -39,43 +43,10 @@
     .form-card label { display:block; margin-top:0.8rem; font-weight:600; font-size:0.9rem; }
     .form-card input, .form-card textarea { width:100%; padding:0.6rem; margin-top:0.3rem; border:1px solid #ddd; border-radius:8px; }
     .form-card textarea { min-height:80px; resize:vertical; }
-    .tab-bar { display:flex; gap:0.3rem; flex-wrap:wrap; margin-bottom:1rem; }
-    .tab-bar button { padding:0.5rem 1rem; border:1px solid #ddd; background:#fff; border-radius:20px; cursor:pointer; font-weight:500; }
-    .tab-bar button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
-
-    /* Category dropdown styles */
-    .category-input-cell {
-      position: relative;
-    }
-    .category-input-cell input {
-      width: 100%;
-      padding: 0.3rem;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      font-family: inherit;
-      font-size: 0.85rem;
-    }
-    .category-suggestions {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      background: #fff;
-      border: 1px solid #ddd;
-      z-index: 100;
-      max-height: 150px;
-      overflow-y: auto;
-      width: 100%;
-      border-radius: 0 0 5px 5px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      display: none;
-    }
-    .category-suggestions div {
-      padding: 0.4rem 0.6rem;
-      cursor: pointer;
-    }
-    .category-suggestions div:hover {
-      background: #f0f4f7;
-    }
+    .pagination { display:flex; gap:0.3rem; margin-top:0.8rem; flex-wrap:wrap; align-items:center; }
+    .pagination button { padding:0.3rem 0.6rem; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer; }
+    .pagination button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
+    .pagination button:disabled { opacity:0.5; cursor:default; }
   </style>
 </head>
 <body>
@@ -165,6 +136,9 @@
 
   let currentCollection = "product";
   let currentDocs = [];
+  // Pagination state
+  let currentPage = 1;
+  let recordsPerPage = 10;   // default: 10 records per page
 
   const loginScreen = document.getElementById("loginScreen");
   const dashboard = document.getElementById("dashboard");
@@ -205,7 +179,7 @@
     setTimeout(() => toastEl.classList.remove("show"), 2500);
   }
 
-  // ── Next‑ID logic (unchanged) ──
+  // ── Next‑ID logic ──
   async function getNextId() {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
@@ -240,13 +214,13 @@
     try {
       const snap = await getDocs(collection(db, coll.name));
       currentDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      currentPage = 1; // reset page on collection change
       renderTable();
     } catch (err) {
       tableContainer.innerHTML = `<p class="error">Error: ${err.message}</p>`;
     }
   }
 
-  // Build a set of unique existing categories (only for Product table)
   function getUniqueCategories() {
     if (currentCollection !== "product" || !currentDocs.length) return [];
     const cats = new Set();
@@ -266,20 +240,45 @@
       return;
     }
 
-    // Unique categories for dropdown (only Product → Category column)
+    // Pagination calculations
+    const totalRecords = currentDocs.length;
+    const maxPage = Math.ceil(totalRecords / recordsPerPage);
+    if (currentPage > maxPage) currentPage = maxPage;
+    const startIdx = (currentPage - 1) * recordsPerPage;
+    const endIdx = startIdx + (recordsPerPage === 0 ? totalRecords : recordsPerPage);
+    const pageDocs = (recordsPerPage === 0) ? currentDocs : currentDocs.slice(startIdx, endIdx);
+
     const uniqueCategories = getUniqueCategories();
 
-    let html = `<button class="btn small" id="addRowBtn">➕ Add Row</button>`;
-    html += `<button class="btn small secondary" id="showFormBtn" style="margin-left:0.5rem;">📝 Form</button>`;
+    // Build HTML with pagination controls
+    let html = `<div class="controls">
+      <div>
+        <button class="btn small" id="addRowBtn">➕ Add Row</button>
+        <button class="btn small secondary" id="showFormBtn" style="margin-left:0.5rem;">📝 Form</button>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.3rem;">
+        <label style="font-size:0.85rem;">Show:</label>
+        <select id="recordsPerPageSelect">
+          <option value="10" ${recordsPerPage === 10 ? "selected" : ""}>10</option>
+          <option value="20" ${recordsPerPage === 20 ? "selected" : ""}>20</option>
+          <option value="50" ${recordsPerPage === 50 ? "selected" : ""}>50</option>
+          <option value="100" ${recordsPerPage === 100 ? "selected" : ""}>100</option>
+          <option value="0" ${recordsPerPage === 0 ? "selected" : ""}>All</option>
+        </select>
+        <span style="font-size:0.85rem;">(Total: ${totalRecords})</span>
+      </div>
+    </div>`;
+
     html += `<table id="data-table"><thead><tr><th>ID</th>`;
     fields.forEach(f => html += `<th>${f}</th>`);
     html += `<th></th></tr></thead><tbody>`;
 
-    currentDocs.forEach((doc, rowIdx) => {
+    pageDocs.forEach((doc, rowIdx) => {
+      const realRowIdx = startIdx + rowIdx; // for arrow navigation across pages we need global index, but we're only navigating on current page. We'll use data-row as row offset within page.
       html += `<tr data-row="${rowIdx}">`;
       html += `<td class="doc-id-cell" data-col="0">${esc(doc.id)}</td>`;
       fields.forEach((f, colIdx) => {
-        const col = colIdx + 1; // columns start after ID
+        const col = colIdx + 1;
         html += `<td class="editable-cell" contenteditable="true" 
                     data-col="${col}" data-row="${rowIdx}" 
                     data-doc-id="${esc(doc.id)}" data-field="${f}">${esc(doc[f] || "")}</td>`;
@@ -288,9 +287,45 @@
       html += `</tr>`;
     });
     html += `</tbody></table>`;
+
+    // Pagination buttons
+    if (recordsPerPage > 0 && totalRecords > recordsPerPage) {
+      html += `<div class="pagination">`;
+      html += `<button id="prevPageBtn" ${currentPage === 1 ? "disabled" : ""}>Previous</button>`;
+      // Page numbers (show up to 5 pages around current)
+      const startPage = Math.max(1, currentPage - 2);
+      const endPage = Math.min(maxPage, currentPage + 2);
+      if (startPage > 1) html += `<button class="pageBtn" data-page="1">1</button> ...`;
+      for (let p = startPage; p <= endPage; p++) {
+        html += `<button class="pageBtn ${p === currentPage ? "active" : ""}" data-page="${p}">${p}</button>`;
+      }
+      if (endPage < maxPage) html += `... <button class="pageBtn" data-page="${maxPage}">${maxPage}</button>`;
+      html += `<button id="nextPageBtn" ${currentPage === maxPage ? "disabled" : ""}>Next</button>`;
+      html += `</div>`;
+    }
+
     tableContainer.innerHTML = html;
 
-    // Inline edit – standard (blur saves)
+    // Attach pagination events
+    document.getElementById("recordsPerPageSelect")?.addEventListener("change", (e) => {
+      recordsPerPage = parseInt(e.target.value);
+      currentPage = 1;
+      renderTable();
+    });
+    document.getElementById("prevPageBtn")?.addEventListener("click", () => {
+      if (currentPage > 1) { currentPage--; renderTable(); }
+    });
+    document.getElementById("nextPageBtn")?.addEventListener("click", () => {
+      if (currentPage < maxPage) { currentPage++; renderTable(); }
+    });
+    document.querySelectorAll(".pageBtn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        currentPage = parseInt(btn.dataset.page);
+        renderTable();
+      });
+    });
+
+    // Inline edit handlers (same as before)
     tableContainer.querySelectorAll(".editable-cell").forEach(cell => {
       let orig = cell.textContent.trim();
       cell.addEventListener("focus", () => { orig = cell.textContent.trim(); });
@@ -315,13 +350,13 @@
         if (!confirm(`Delete ${btn.dataset.docId}?`)) return;
         await deleteDoc(doc(db, collectionsMap[currentCollection].name, btn.dataset.docId));
         showToast("Deleted");
+        // Reload table (pagination will adjust)
         loadTable();
       });
     });
 
-    // ── Category dropdown for Product table ──
+    // Category dropdown for Product table
     if (currentCollection === "product" && uniqueCategories.length > 0) {
-      // Add a hidden datalist for autocomplete
       const datalistId = "categorySuggestionsList";
       let datalistEl = document.getElementById(datalistId);
       if (!datalistEl) {
@@ -330,13 +365,9 @@
         document.body.appendChild(datalistEl);
       }
       datalistEl.innerHTML = uniqueCategories.map(c => `<option value="${esc(c)}">`).join("");
-
-      // Attach focus handler to Category cells
       const categoryCells = tableContainer.querySelectorAll('[data-field="Category"]');
       categoryCells.forEach(cell => {
-        // When cell gets focus, convert to input
         cell.addEventListener("focus", function(e) {
-          // Prevent multiple inputs
           if (this.querySelector("input")) return;
           const currentText = this.textContent.trim();
           const input = document.createElement("input");
@@ -352,29 +383,19 @@
           this.textContent = "";
           this.appendChild(input);
           input.focus();
-
-          // On blur, revert to plain text
           input.addEventListener("blur", () => {
-            const newVal = input.value.trim();
-            this.textContent = newVal || "";
-            // Trigger original blur handler
+            this.textContent = input.value.trim() || "";
             this.dispatchEvent(new Event("blur", {bubbles: true}));
           });
-
-          // Prevent cell blur when clicking on input
           input.addEventListener("mousedown", e => e.stopPropagation());
         });
-
-        // Prevent cell contenteditable editing when input is inside
         cell.addEventListener("keydown", function(e) {
-          if (this.querySelector("input")) {
-            e.stopPropagation();
-          }
+          if (this.querySelector("input")) e.stopPropagation();
         });
       });
     }
 
-    // ── Arrow‑key navigation ──
+    // Arrow-key navigation (page‑local)
     const table = document.getElementById("data-table");
     if (table) {
       table.addEventListener("keydown", function(e) {
@@ -391,13 +412,12 @@
         let newRow = row, newCol = col;
         if (key === "ArrowUp") newRow = Math.max(0, row - 1);
         if (key === "ArrowDown") newRow = row + 1;
-        if (key === "ArrowLeft") newCol = Math.max(1, col - 1);   // skip ID column (col 0)
+        if (key === "ArrowLeft") newCol = Math.max(1, col - 1);
         if (key === "ArrowRight") newCol = col + 1;
 
-        // Find the target cell
         const targetCell = table.querySelector(`tr[data-row="${newRow}"] td[data-col="${newCol}"]`);
         if (targetCell && targetCell.classList.contains("editable-cell")) {
-          target.blur();  // save current cell via blur
+          target.blur();
           targetCell.focus();
         }
       });
@@ -407,7 +427,6 @@
     document.getElementById("showFormBtn")?.addEventListener("click", showForm);
   }
 
-  // ── Add Row (unchanged) ──
   async function addRow() {
     const fields = collectionsMap[currentCollection].fields;
     const nextId = await getNextId();
@@ -415,13 +434,12 @@
       await setDoc(doc(db, collectionsMap[currentCollection].name, nextId),
         Object.fromEntries(fields.map(f => [f, ""])));
       showToast(`Added ${nextId}`);
-      loadTable();
+      loadTable(); // will re‑render table, preserve pagination
     } catch (err) {
       showToast("Error: " + err.message);
     }
   }
 
-  // ── Form (unchanged) ──
   function showForm() {
     const fields = collectionsMap[currentCollection].fields;
     let formHtml = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
@@ -455,6 +473,8 @@
     tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
     e.target.classList.add("active");
     currentCollection = e.target.dataset.collection;
+    recordsPerPage = 10;
+    currentPage = 1;
     loadTable();
   });
 
