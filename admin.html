@@ -66,6 +66,9 @@
     }
     .parent-item:hover { background: #e2e8f0; }
     .parent-item.selected { outline: 2px solid #5b7a8c; background: #e6eff3; }
+    .parent-item img {
+      width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #ddd;
+    }
     .product-check-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
     .product-check-item { display: flex; align-items: center; gap: 0.5rem; }
     .product-check-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
@@ -215,7 +218,7 @@
     setTimeout(() => toastEl.classList.remove("show"), 2500);
   }
 
-  // ── Next‑ID logic ──
+  // ── Next‑ID logic (for single add) ──
   async function getNextId() {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
@@ -241,6 +244,34 @@
     }
     if (maxNum === 0) return "1";
     return bestPrefix + String(maxNum + 1).padStart(bestPad || 1, "0");
+  }
+
+  // Helper: generate an array of sequential IDs for the mapping collection
+  async function generateNextMappingIds(count) {
+    const collName = collectionsMap[currentCollection].name;
+    const snap = await getDocs(collection(db, collName));
+    let maxNum = 0;
+    let prefix = "";
+    let padLength = 1;
+    snap.forEach(d => {
+      const m = d.id.match(/^(.*?)(\d+)$/);
+      if (!m) return;
+      const num = parseInt(m[2], 10);
+      const p = m[1];
+      const len = m[2].length;
+      if (num > maxNum || (num === maxNum && len > padLength)) {
+        maxNum = num;
+        prefix = p;
+        padLength = len;
+      }
+    });
+    const ids = [];
+    let currentNum = maxNum + 1;
+    for (let i = 0; i < count; i++) {
+      ids.push(prefix + String(currentNum).padStart(padLength, '0'));
+      currentNum++;
+    }
+    return ids;
   }
 
   // ── Load & render table ──
@@ -272,7 +303,6 @@
     const fields = coll.fields;
     if (currentDocs.length === 0) {
       let html = `<p>No documents yet.</p><button class="btn" id="addRowBtn">➕ Add First Row</button>`;
-      // For mapping tables, also show a link wizard button even when empty
       if (currentCollection === "inprMap" || currentCollection === "piprMap") {
         html += `<button class="btn small secondary" id="showLinkWizardBtn" style="margin-left:0.5rem;">🛠️ Link Wizard</button>`;
       }
@@ -507,11 +537,10 @@
     linkWizardModal.classList.remove("hidden");
     const mappingCollection = collectionsMap[currentCollection];
     const parentCollectionName = mappingCollection.parentCollection;
-    const parentIdField = mappingCollection.parentIdField; // e.g., "INSTA ID" or "Pint ID"
+    const parentIdField = mappingCollection.parentIdField;
 
     linkWizardContent.innerHTML = `<h2>Link Wizard: ${mappingCollection.name}</h2><div class="spinner"></div>`;
 
-    // Step 1: Fetch parent documents and products
     (async () => {
       try {
         // Fetch parent collection (Instagram or Pinterest)
@@ -522,12 +551,24 @@
         const productSnap = await getDocs(collection(db, "Product"));
         const products = productSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // Determine which image field to use for thumbnail
+        let parentImageField = "Thumbnail"; // default for Instagram
+        if (parentCollectionName === "Pinterest") {
+          // Pinterest collection has "Alt Image" and "Link". Use the first that is a plausible image URL.
+          parentImageField = "Alt Image";
+        }
+
         // Render step 1: select parent
         let parentHtml = `<h3>Select a ${parentCollectionName} item</h3>`;
         parentHtml += `<div class="parent-list">`;
         parents.forEach(p => {
           const label = p.id + (p["Type"] ? ` (${p["Type"]})` : "");
-          parentHtml += `<div class="parent-item" data-parent-id="${esc(p.id)}">${esc(label)}</div>`;
+          const imgSrc = p[parentImageField] || p["image"] || p["link"] || "";
+          const imgTag = imgSrc ? `<img src="${esc(imgSrc)}" onerror="this.style.display='none'" alt="">` : '';
+          parentHtml += `<div class="parent-item" data-parent-id="${esc(p.id)}">
+            ${imgTag}
+            <span>${esc(label)}</span>
+          </div>`;
         });
         parentHtml += `</div>`;
         parentHtml += `<div id="productSelectionArea" style="display:none;">`;
@@ -536,7 +577,7 @@
         parentHtml += `<div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected Products</button></div>`;
         parentHtml += `</div>`;
 
-        linkWizardContent.innerHTML += parentHtml;
+        linkWizardContent.innerHTML = parentHtml;
 
         let selectedParentId = null;
 
@@ -574,21 +615,22 @@
           }
           const selectedProductIds = Array.from(checkboxes).map(cb => cb.value);
 
-          // Create mapping documents
           try {
+            // Generate continuous IDs for the mapping documents
+            const nextIds = await generateNextMappingIds(selectedProductIds.length);
             const collName = collectionsMap[currentCollection].name;
-            for (const productId of selectedProductIds) {
-              // Generate an auto ID for the mapping doc, or you can let Firestore auto-generate
-              const mappingDoc = doc(collection(db, collName));
+            for (let i = 0; i < selectedProductIds.length; i++) {
+              const productId = selectedProductIds[i];
+              const mappingId = nextIds[i];
               const payload = {
                 [parentIdField]: selectedParentId,
                 "Product ID": productId
               };
-              await setDoc(mappingDoc, payload);
+              await setDoc(doc(db, collName, mappingId), payload);
             }
             showToast(`Linked ${selectedProductIds.length} product(s) to ${selectedParentId}`);
             linkWizardModal.classList.add("hidden");
-            loadTable(); // refresh table
+            loadTable();
           } catch (err) {
             showToast("Error: " + err.message);
           }
