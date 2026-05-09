@@ -35,6 +35,10 @@
     .editable-cell { background:#fcfaf7; min-width:120px; outline:none; position:relative; border: 1px solid #d0d7de; }
     .editable-cell:focus { background:#fffdf8; outline:2px solid rgba(91,122,140,0.35); }
     .delete-btn { background:#f8d7da; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#b23b3b; font-weight:600; }
+    .copy-btn { background:#e0f0e8; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#1f6b4a; font-weight:600; margin-right:0.3rem; }
+    .copy-btn:hover { background:#cce6d9; }
+    .copy-to-btn { background:#e6eef4; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#1f4b6b; font-weight:600; margin-right:0.3rem; }
+    .copy-to-btn:hover { background:#d0dde8; }
     .spinner { width:30px; height:30px; border:3px solid rgba(91,122,140,0.2); border-top-color:#5b7a8c; border-radius:50%; animation:spin 0.8s linear infinite; margin:2rem auto; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .toast { position:fixed; bottom:1rem; left:50%; transform:translateX(-50%); background:#2d6a4f; color:#fff; padding:0.7rem 1.2rem; border-radius:10px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; }
@@ -48,7 +52,7 @@
     .pagination button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
     .pagination button:disabled { opacity:0.5; cursor:default; }
 
-    /* Link wizard modal */
+    /* Modals */
     .modal-overlay {
       position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6);
       display: flex; align-items: center; justify-content: center; z-index: 2000;
@@ -66,14 +70,19 @@
     }
     .parent-item:hover { background: #e2e8f0; }
     .parent-item.selected { outline: 2px solid #5b7a8c; background: #e6eff3; }
-    .parent-item img {
-      width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #ddd;
-    }
+    .parent-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #ddd; }
     .product-check-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
     .product-check-item { display: flex; align-items: center; gap: 0.5rem; }
     .product-check-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
     .product-check-item label { font-size: 0.9rem; }
     .link-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .doc-list-simple { display: flex; flex-direction: column; gap: 0.3rem; }
+    .doc-list-simple .doc-item {
+      padding: 0.5rem 1rem; border: 1px solid #e0e0e0; border-radius: 6px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .doc-list-simple .doc-item:hover { background: #f0f4f7; }
+    .doc-list-simple .doc-item.selected { background: #e6eff3; border-color: #5b7a8c; }
   </style>
 </head>
 <body>
@@ -89,7 +98,7 @@
   </div>
 </div>
 
-<!-- DASHBOARD (hidden until login) -->
+<!-- DASHBOARD -->
 <div id="dashboard" class="hidden">
   <div class="card wide-card">
     <div class="top-bar">
@@ -103,17 +112,26 @@
       <button data-collection="instagram">📸 Instagram</button>
       <button data-collection="inprMap">🔗 INPR MAP</button>
     </div>
-    <div id="tableContainer">
-      <div class="spinner"></div>
-    </div>
+    <div id="tableContainer"><div class="spinner"></div></div>
   </div>
   <div class="toast" id="toast"></div>
 </div>
 
 <!-- LINK WIZARD MODAL -->
 <div id="linkWizardModal" class="modal-overlay hidden">
+  <div class="modal-box"><div id="linkWizardContent"></div></div>
+</div>
+
+<!-- COPY TO MODAL -->
+<div id="copyToModal" class="modal-overlay hidden">
   <div class="modal-box">
-    <div id="linkWizardContent"></div>
+    <h2>📤 Copy to Existing Row</h2>
+    <p>Select a target document to overwrite with data from the selected source.</p>
+    <div id="copyToTargetList" class="doc-list-simple"></div>
+    <div class="link-actions" style="margin-top:1rem;">
+      <button class="btn secondary" id="cancelCopyTo">Cancel</button>
+      <button class="btn" id="confirmCopyTo" disabled>Copy to Selected</button>
+    </div>
   </div>
 </div>
 
@@ -187,6 +205,13 @@
   const tabBar = document.getElementById("tabBar");
   const linkWizardModal = document.getElementById("linkWizardModal");
   const linkWizardContent = document.getElementById("linkWizardContent");
+  const copyToModal = document.getElementById("copyToModal");
+  const copyToTargetList = document.getElementById("copyToTargetList");
+  const confirmCopyToBtn = document.getElementById("confirmCopyTo");
+  const cancelCopyToBtn = document.getElementById("cancelCopyTo");
+
+  let pendingCopySourceId = null;
+  let selectedCopyTargetId = null;
 
   // ── Auth ──
   loginBtn.addEventListener("click", async () => {
@@ -218,7 +243,7 @@
     setTimeout(() => toastEl.classList.remove("show"), 2500);
   }
 
-  // ── Next‑ID logic (for single add) ──
+  // ── Next‑ID logic ──
   async function getNextId() {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
@@ -246,7 +271,6 @@
     return bestPrefix + String(maxNum + 1).padStart(bestPad || 1, "0");
   }
 
-  // Helper: generate an array of sequential IDs for the mapping collection
   async function generateNextMappingIds(count) {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
@@ -288,14 +312,56 @@
     }
   }
 
-  function getUniqueCategories() {
+  function getUniqueValues(fieldName) {
     if (currentCollection !== "product" || !currentDocs.length) return [];
-    const cats = new Set();
+    const values = new Set();
     currentDocs.forEach(doc => {
-      const val = (doc["Category"] || "").trim();
-      if (val) cats.add(val);
+      const val = (doc[fieldName] || "").trim();
+      if (val) values.add(val);
     });
-    return Array.from(cats).sort();
+    return Array.from(values).sort();
+  }
+
+  function setupDropdownForField(datalistId, fieldName, fieldSelector) {
+    const uniqueValues = getUniqueValues(fieldName);
+    if (uniqueValues.length === 0) return;
+    let datalistEl = document.getElementById(datalistId);
+    if (!datalistEl) {
+      datalistEl = document.createElement("datalist");
+      datalistEl.id = datalistId;
+      document.body.appendChild(datalistEl);
+    }
+    datalistEl.innerHTML = uniqueValues.map(v => `<option value="${esc(v)}">`).join("");
+    const cells = tableContainer.querySelectorAll(fieldSelector);
+    cells.forEach(cell => {
+      if (cell.dataset.dropdownSetup === "true") return;
+      cell.dataset.dropdownSetup = "true";
+      cell.addEventListener("focus", function(e) {
+        if (this.querySelector("input")) return;
+        this.contentEditable = "false";
+        const currentText = this.textContent.trim();
+        const input = document.createElement("input");
+        input.type = "text";
+        input.setAttribute("list", datalistId);
+        input.value = currentText;
+        Object.assign(input.style, {
+          width: "100%", padding: "0.3rem", border: "1px solid #ccc",
+          borderRadius: "4px", fontFamily: "inherit", fontSize: "0.85rem", background: "white"
+        });
+        this.textContent = "";
+        this.appendChild(input);
+        input.focus();
+        input.addEventListener("blur", () => {
+          const newVal = input.value.trim();
+          this.textContent = newVal || "";
+          this.contentEditable = "true";
+          this.dispatchEvent(new Event("blur", { bubbles: true }));
+        });
+        input.addEventListener("mousedown", e => e.stopPropagation());
+        input.addEventListener("keydown", (e) => { if (e.key.startsWith("Arrow")) e.stopPropagation(); });
+      });
+      cell.addEventListener("keydown", function(e) { if (this.querySelector("input")) e.stopPropagation(); });
+    });
   }
 
   function renderTable() {
@@ -319,8 +385,6 @@
     const endIdx = startIdx + (recordsPerPage === 0 ? totalRecords : recordsPerPage);
     const pageDocs = (recordsPerPage === 0) ? currentDocs : currentDocs.slice(startIdx, endIdx);
 
-    const uniqueCategories = getUniqueCategories();
-
     let html = `<div class="controls">
       <div>
         <button class="btn small" id="addRowBtn">➕ Add Row</button>
@@ -342,7 +406,7 @@
 
     html += `<table id="data-table"><thead><tr><th>ID</th>`;
     fields.forEach(f => html += `<th>${f}</th>`);
-    html += `<th></th></tr></thead><tbody>`;
+    html += `<th>Actions</th></tr></thead><tbody>`;
 
     pageDocs.forEach((doc, rowIdx) => {
       html += `<tr data-row="${rowIdx}">`;
@@ -353,7 +417,11 @@
                     data-col="${col}" data-row="${rowIdx}" 
                     data-doc-id="${esc(doc.id)}" data-field="${f}">${esc(doc[f] || "")}</td>`;
       });
-      html += `<td data-col="${fields.length+1}"><button class="delete-btn" data-doc-id="${esc(doc.id)}">🗑️</button></td>`;
+      html += `<td data-col="${fields.length+1}">
+        <button class="copy-btn" data-doc-id="${esc(doc.id)}">📋 Copy</button>
+        <button class="copy-to-btn" data-doc-id="${esc(doc.id)}">📤 Copy to…</button>
+        <button class="delete-btn" data-doc-id="${esc(doc.id)}">🗑️</button>
+      </td>`;
       html += `</tr>`;
     });
     html += `</tbody></table>`;
@@ -380,20 +448,13 @@
       currentPage = 1;
       renderTable();
     });
-    document.getElementById("prevPageBtn")?.addEventListener("click", () => {
-      if (currentPage > 1) { currentPage--; renderTable(); }
-    });
-    document.getElementById("nextPageBtn")?.addEventListener("click", () => {
-      if (currentPage < maxPage) { currentPage++; renderTable(); }
-    });
+    document.getElementById("prevPageBtn")?.addEventListener("click", () => { if (currentPage > 1) { currentPage--; renderTable(); } });
+    document.getElementById("nextPageBtn")?.addEventListener("click", () => { if (currentPage < maxPage) { currentPage++; renderTable(); } });
     document.querySelectorAll(".pageBtn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        currentPage = parseInt(btn.dataset.page);
-        renderTable();
-      });
+      btn.addEventListener("click", () => { currentPage = parseInt(btn.dataset.page); renderTable(); });
     });
 
-    // Inline edit handlers
+    // Inline edit
     tableContainer.querySelectorAll(".editable-cell").forEach(cell => {
       let orig = cell.textContent.trim();
       cell.addEventListener("focus", () => { orig = cell.textContent.trim(); });
@@ -412,6 +473,28 @@
       });
     });
 
+    // Copy buttons
+    tableContainer.querySelectorAll(".copy-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const docId = btn.dataset.docId;
+        const sourceDoc = currentDocs.find(d => d.id === docId);
+        if (!sourceDoc) return showToast("Source document not found.");
+        const nextId = await getNextId();
+        const payload = {};
+        collectionsMap[currentCollection].fields.forEach(f => { payload[f] = sourceDoc[f] || ""; });
+        try {
+          await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), payload);
+          showToast(`Copied to ${nextId}`);
+          loadTable();
+        } catch (err) { showToast("Error: " + err.message); }
+      });
+    });
+
+    // Copy to... buttons
+    tableContainer.querySelectorAll(".copy-to-btn").forEach(btn => {
+      btn.addEventListener("click", openCopyToModal);
+    });
+
     // Delete buttons
     tableContainer.querySelectorAll(".delete-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
@@ -422,44 +505,10 @@
       });
     });
 
-    // Category dropdown (Product only)
-    if (currentCollection === "product" && uniqueCategories.length > 0) {
-      const datalistId = "categorySuggestionsList";
-      let datalistEl = document.getElementById(datalistId);
-      if (!datalistEl) {
-        datalistEl = document.createElement("datalist");
-        datalistEl.id = datalistId;
-        document.body.appendChild(datalistEl);
-      }
-      datalistEl.innerHTML = uniqueCategories.map(c => `<option value="${esc(c)}">`).join("");
-      const categoryCells = tableContainer.querySelectorAll('[data-field="Category"]');
-      categoryCells.forEach(cell => {
-        cell.addEventListener("focus", function(e) {
-          if (this.querySelector("input")) return;
-          const currentText = this.textContent.trim();
-          const input = document.createElement("input");
-          input.type = "text";
-          input.setAttribute("list", datalistId);
-          input.value = currentText;
-          input.style.width = "100%";
-          input.style.padding = "0.3rem";
-          input.style.border = "1px solid #ccc";
-          input.style.borderRadius = "4px";
-          input.style.fontFamily = "inherit";
-          input.style.fontSize = "0.85rem";
-          this.textContent = "";
-          this.appendChild(input);
-          input.focus();
-          input.addEventListener("blur", () => {
-            this.textContent = input.value.trim() || "";
-            this.dispatchEvent(new Event("blur", {bubbles: true}));
-          });
-          input.addEventListener("mousedown", e => e.stopPropagation());
-        });
-        cell.addEventListener("keydown", function(e) {
-          if (this.querySelector("input")) e.stopPropagation();
-        });
-      });
+    // Dropdowns for Category and Source
+    if (currentCollection === "product") {
+      setupDropdownForField("categorySuggestionsList", "Category", '[data-field="Category"]');
+      setupDropdownForField("sourceSuggestionsList", "Source", '[data-field="Source"]');
     }
 
     // Arrow-key navigation
@@ -496,22 +545,17 @@
     const fields = collectionsMap[currentCollection].fields;
     const nextId = await getNextId();
     try {
-      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId),
-        Object.fromEntries(fields.map(f => [f, ""])));
+      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), Object.fromEntries(fields.map(f => [f, ""])));
       showToast(`Added ${nextId}`);
       loadTable();
-    } catch (err) {
-      showToast("Error: " + err.message);
-    }
+    } catch (err) { showToast("Error: " + err.message); }
   }
 
   function showForm() {
     const fields = collectionsMap[currentCollection].fields;
     let formHtml = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
     formHtml += `<label>Document ID <span style="color:#b23b3b;">*</span></label><input id="formDocId" placeholder="e.g. PA0002" />`;
-    fields.forEach(f => {
-      formHtml += `<label>${f}</label><input id="form_${f.replace(/\s/g,"_")}" />`;
-    });
+    fields.forEach(f => { formHtml += `<label>${f}</label><input id="form_${f.replace(/\s/g,"_")}" />`; });
     formHtml += `<button class="btn" id="submitFormBtn" style="margin-top:1rem;">💾 Save</button></div>`;
     tableContainer.innerHTML = formHtml;
     getNextId().then(id => { document.getElementById("formDocId").value = id; });
@@ -519,16 +563,12 @@
       const docId = document.getElementById("formDocId").value.trim();
       if (!docId) { showToast("Document ID required"); return; }
       const payload = {};
-      fields.forEach(f => {
-        payload[f] = document.getElementById(`form_${f.replace(/\s/g,"_")}`).value;
-      });
+      fields.forEach(f => { payload[f] = document.getElementById(`form_${f.replace(/\s/g,"_")}`).value; });
       try {
         await setDoc(doc(db, collectionsMap[currentCollection].name, docId), payload);
         showToast(`Saved ${docId}`);
         loadTable();
-      } catch (err) {
-        showToast("Error: " + err.message);
-      }
+      } catch (err) { showToast("Error: " + err.message); }
     });
   }
 
@@ -538,57 +578,29 @@
     const mappingCollection = collectionsMap[currentCollection];
     const parentCollectionName = mappingCollection.parentCollection;
     const parentIdField = mappingCollection.parentIdField;
-
     linkWizardContent.innerHTML = `<h2>Link Wizard: ${mappingCollection.name}</h2><div class="spinner"></div>`;
-
     (async () => {
       try {
-        // Fetch parent collection (Instagram or Pinterest)
         const parentSnap = await getDocs(collection(db, parentCollectionName));
         const parents = parentSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Fetch all products
         const productSnap = await getDocs(collection(db, "Product"));
         const products = productSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Determine which image field to use for thumbnail
-        let parentImageField = "Thumbnail"; // default for Instagram
-        if (parentCollectionName === "Pinterest") {
-          // Pinterest collection has "Alt Image" and "Link". Use the first that is a plausible image URL.
-          parentImageField = "Alt Image";
-        }
-
-        // Render step 1: select parent
-        let parentHtml = `<h3>Select a ${parentCollectionName} item</h3>`;
-        parentHtml += `<div class="parent-list">`;
+        let parentImageField = parentCollectionName === "Pinterest" ? "Alt Image" : "Thumbnail";
+        let parentHtml = `<h3>Select a ${parentCollectionName} item</h3><div class="parent-list">`;
         parents.forEach(p => {
           const label = p.id + (p["Type"] ? ` (${p["Type"]})` : "");
-          const imgSrc = p[parentImageField] || p["image"] || p["link"] || "";
+          const imgSrc = p[parentImageField] || "";
           const imgTag = imgSrc ? `<img src="${esc(imgSrc)}" onerror="this.style.display='none'" alt="">` : '';
-          parentHtml += `<div class="parent-item" data-parent-id="${esc(p.id)}">
-            ${imgTag}
-            <span>${esc(label)}</span>
-          </div>`;
+          parentHtml += `<div class="parent-item" data-parent-id="${esc(p.id)}">${imgTag}<span>${esc(label)}</span></div>`;
         });
-        parentHtml += `</div>`;
-        parentHtml += `<div id="productSelectionArea" style="display:none;">`;
-        parentHtml += `<h3>Select Products to link</h3>`;
-        parentHtml += `<div class="product-check-list" id="productList"></div>`;
-        parentHtml += `<div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected Products</button></div>`;
-        parentHtml += `</div>`;
-
+        parentHtml += `</div><div id="productSelectionArea" style="display:none;"><h3>Select Products to link</h3><div class="product-check-list" id="productList"></div><div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected Products</button></div></div>`;
         linkWizardContent.innerHTML = parentHtml;
-
         let selectedParentId = null;
-
-        // Parent click handler
         document.querySelectorAll(".parent-item").forEach(item => {
           item.addEventListener("click", () => {
             document.querySelectorAll(".parent-item").forEach(i => i.classList.remove("selected"));
             item.classList.add("selected");
             selectedParentId = item.dataset.parentId;
-
-            // Show product selection
             const productArea = document.getElementById("productSelectionArea");
             productArea.style.display = "block";
             const productList = document.getElementById("productList");
@@ -597,56 +609,80 @@
                 <input type="checkbox" id="prod_${esc(prod.id)}" value="${esc(prod.id)}">
                 <img src="${esc(prod["Image Link"] || "")}" onerror="this.style.display='none'" alt="">
                 <label for="prod_${esc(prod.id)}">${esc(prod["Product Name"] || prod.id)}</label>
-              </div>
-            `).join("");
+              </div>`).join("");
           });
         });
-
-        // Link button
         document.getElementById("linkSelectedBtn")?.addEventListener("click", async () => {
-          if (!selectedParentId) {
-            showToast("Please select a parent first.");
-            return;
-          }
+          if (!selectedParentId) { showToast("Please select a parent first."); return; }
           const checkboxes = document.querySelectorAll(".product-check-item input[type='checkbox']:checked");
-          if (checkboxes.length === 0) {
-            showToast("Select at least one product.");
-            return;
-          }
+          if (checkboxes.length === 0) { showToast("Select at least one product."); return; }
           const selectedProductIds = Array.from(checkboxes).map(cb => cb.value);
-
           try {
-            // Generate continuous IDs for the mapping documents
             const nextIds = await generateNextMappingIds(selectedProductIds.length);
             const collName = collectionsMap[currentCollection].name;
             for (let i = 0; i < selectedProductIds.length; i++) {
               const productId = selectedProductIds[i];
               const mappingId = nextIds[i];
-              const payload = {
-                [parentIdField]: selectedParentId,
-                "Product ID": productId
-              };
-              await setDoc(doc(db, collName, mappingId), payload);
+              await setDoc(doc(db, collName, mappingId), { [parentIdField]: selectedParentId, "Product ID": productId });
             }
             showToast(`Linked ${selectedProductIds.length} product(s) to ${selectedParentId}`);
             linkWizardModal.classList.add("hidden");
             loadTable();
-          } catch (err) {
-            showToast("Error: " + err.message);
-          }
+          } catch (err) { showToast("Error: " + err.message); }
         });
-      } catch (err) {
-        linkWizardContent.innerHTML += `<p class="error">Error loading data: ${err.message}</p>`;
-      }
+      } catch (err) { linkWizardContent.innerHTML += `<p class="error">Error loading data: ${err.message}</p>`; }
     })();
   }
 
-  // Close modal on click outside
-  linkWizardModal.addEventListener("click", (e) => {
-    if (e.target === linkWizardModal) {
-      linkWizardModal.classList.add("hidden");
-    }
+  // ── Copy to existing row modal ──
+  function openCopyToModal(e) {
+    const sourceId = e.currentTarget.dataset.docId;
+    pendingCopySourceId = sourceId;
+    const otherDocs = currentDocs.filter(d => d.id !== sourceId);
+    copyToTargetList.innerHTML = otherDocs.map(d => {
+      const label = d.id + (d["Product Name"] ? ` — ${esc(d["Product Name"])}` : "");
+      return `<div class="doc-item" data-target-id="${esc(d.id)}">${esc(label)}</div>`;
+    }).join("");
+    selectedCopyTargetId = null;
+    confirmCopyToBtn.disabled = true;
+    copyToModal.classList.remove("hidden");
+
+    copyToTargetList.querySelectorAll(".doc-item").forEach(item => {
+      item.addEventListener("click", () => {
+        copyToTargetList.querySelectorAll(".doc-item").forEach(i => i.classList.remove("selected"));
+        item.classList.add("selected");
+        selectedCopyTargetId = item.dataset.targetId;
+        confirmCopyToBtn.disabled = false;
+      });
+    });
+  }
+
+  cancelCopyToBtn.addEventListener("click", () => {
+    copyToModal.classList.add("hidden");
+    pendingCopySourceId = null;
+    selectedCopyTargetId = null;
   });
+
+  confirmCopyToBtn.addEventListener("click", async () => {
+    if (!pendingCopySourceId || !selectedCopyTargetId) return;
+    const sourceDoc = currentDocs.find(d => d.id === pendingCopySourceId);
+    if (!sourceDoc) return showToast("Source not found.");
+    const collName = collectionsMap[currentCollection].name;
+    const payload = {};
+    collectionsMap[currentCollection].fields.forEach(f => { payload[f] = sourceDoc[f] || ""; });
+    try {
+      await updateDoc(doc(db, collName, selectedCopyTargetId), payload);
+      showToast(`Copied to ${selectedCopyTargetId}`);
+      copyToModal.classList.add("hidden");
+      pendingCopySourceId = null;
+      selectedCopyTargetId = null;
+      loadTable();
+    } catch (err) { showToast("Error: " + err.message); }
+  });
+
+  // Close modals on outside click
+  linkWizardModal.addEventListener("click", (e) => { if (e.target === linkWizardModal) linkWizardModal.classList.add("hidden"); });
+  copyToModal.addEventListener("click", (e) => { if (e.target === copyToModal) copyToModal.classList.add("hidden"); });
 
   // ── Tab switching ──
   tabBar.addEventListener("click", (e) => {
