@@ -83,6 +83,35 @@
     }
     .doc-list-simple .doc-item:hover { background: #f0f4f7; }
     .doc-list-simple .doc-item.selected { background: #e6eff3; border-color: #5b7a8c; }
+
+    /* Selection & context menu styles */
+    .cell-selected {
+      background: #c3e0f4 !important;
+      outline: 1px solid #5b7a8c;
+    }
+    .cell-cut {
+      background: #f0f0f0 !important;
+      color: #999;
+      text-decoration: line-through;
+    }
+    .context-menu {
+      display: none;
+      position: fixed;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 3000;
+      min-width: 150px;
+      padding: 0.3rem 0;
+    }
+    .context-menu .menu-item {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+    .context-menu .menu-item:hover { background: #f0f4f7; }
+    .context-menu .menu-item.disabled { color: #999; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -133,6 +162,14 @@
       <button class="btn" id="confirmCopyTo" disabled>Copy to Selected</button>
     </div>
   </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="contextMenu" class="context-menu">
+  <div class="menu-item" data-action="copy">📋 Copy</div>
+  <div class="menu-item" data-action="cut">✂️ Cut</div>
+  <div class="menu-item" data-action="paste">📋 Paste</div>
+  <div class="menu-item" data-action="clear-selection">🚫 Clear Selection</div>
 </div>
 
 <script type="importmap">
@@ -209,9 +246,17 @@
   const copyToTargetList = document.getElementById("copyToTargetList");
   const confirmCopyToBtn = document.getElementById("confirmCopyTo");
   const cancelCopyToBtn = document.getElementById("cancelCopyTo");
+  const contextMenu = document.getElementById("contextMenu");
 
   let pendingCopySourceId = null;
   let selectedCopyTargetId = null;
+
+  // Selection state
+  let selectedCells = new Set();
+  let lastSelectionAnchor = null;
+  let clipboard = null;
+  let cutCells = new Set();
+  let isCutting = false;
 
   // ── Auth ──
   loginBtn.addEventListener("click", async () => {
@@ -300,6 +345,7 @@
 
   // ── Load & render table ──
   async function loadTable() {
+    clearSelection();
     tableContainer.innerHTML = '<div class="spinner"></div>';
     const coll = collectionsMap[currentCollection];
     try {
@@ -365,6 +411,7 @@
   }
 
   function renderTable() {
+    clearSelection();
     const coll = collectionsMap[currentCollection];
     const fields = coll.fields;
     if (currentDocs.length === 0) {
@@ -490,7 +537,7 @@
       });
     });
 
-    // Copy to... buttons
+    // Copy to… buttons
     tableContainer.querySelectorAll(".copy-to-btn").forEach(btn => {
       btn.addEventListener("click", openCopyToModal);
     });
@@ -693,6 +740,224 @@
     recordsPerPage = 10;
     currentPage = 1;
     loadTable();
+  });
+
+  // ── Selection helpers ──
+  function clearSelection() {
+    selectedCells.forEach(cell => cell.classList.remove("cell-selected"));
+    selectedCells.clear();
+    lastSelectionAnchor = null;
+    // also clear cut marks
+    cutCells.forEach(cell => cell.classList.remove("cell-cut"));
+    cutCells.clear();
+    isCutting = false;
+    clipboard = null;  // clear clipboard on selection change? optional, but safer
+  }
+
+  function addToSelection(cell) {
+    cell.classList.add("cell-selected");
+    selectedCells.add(cell);
+  }
+
+  function removeFromSelection(cell) {
+    cell.classList.remove("cell-selected");
+    selectedCells.delete(cell);
+  }
+
+  function toggleSelection(cell) {
+    if (selectedCells.has(cell)) removeFromSelection(cell);
+    else addToSelection(cell);
+  }
+
+  function getCellsInRect(row1, col1, row2, col2) {
+    const table = document.getElementById("data-table");
+    if (!table) return [];
+    const minRow = Math.min(row1, row2);
+    const maxRow = Math.max(row1, row2);
+    const minCol = Math.min(col1, col2);
+    const maxCol = Math.max(col1, col2);
+    const cells = [];
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const cell = table.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`);
+        if (cell && cell.classList.contains("editable-cell")) cells.push(cell);
+      }
+    }
+    return cells;
+  }
+
+  // ── Context menu actions ──
+  function copySelection() {
+    if (selectedCells.size === 0) return;
+    const sorted = Array.from(selectedCells).sort((a, b) => {
+      const ra = parseInt(a.dataset.row), ca = parseInt(a.dataset.col);
+      const rb = parseInt(b.dataset.row), cb = parseInt(b.dataset.col);
+      return ra - rb || ca - cb;
+    });
+    const grid = [];
+    let currentRow = -1;
+    let rowArray = [];
+    sorted.forEach(cell => {
+      const r = parseInt(cell.dataset.row);
+      if (r !== currentRow) {
+        if (rowArray.length) grid.push(rowArray);
+        rowArray = [];
+        currentRow = r;
+      }
+      rowArray.push({ field: cell.dataset.field, value: cell.textContent.trim() });
+    });
+    if (rowArray.length) grid.push(rowArray);
+    clipboard = grid;
+    isCutting = false;
+    cutCells.forEach(c => c.classList.remove("cell-cut"));
+    cutCells.clear();
+    showToast("Copied");
+  }
+
+  function cutSelection() {
+    copySelection();
+    if (clipboard) {
+      isCutting = true;
+      selectedCells.forEach(cell => {
+        cell.classList.add("cell-cut");
+        cutCells.add(cell);
+      });
+      showToast("Cut");
+    }
+  }
+
+  async function pasteSelection(targetCell) {
+    if (!clipboard || clipboard.length === 0) return;
+    if (!targetCell || !targetCell.classList.contains("editable-cell")) return;
+
+    const startRow = parseInt(targetCell.dataset.row);
+    const startCol = parseInt(targetCell.dataset.col);
+    const table = document.getElementById("data-table");
+    if (!table) return;
+
+    for (let i = 0; i < clipboard.length; i++) {
+      const clipRow = clipboard[i];
+      for (let j = 0; j < clipRow.length; j++) {
+        const clipCell = clipRow[j];
+        const targetRow = startRow + i;
+        const targetCol = startCol + j;
+        const target = table.querySelector(`tr[data-row="${targetRow}"] td[data-col="${targetCol}"]`);
+        if (target && target.classList.contains("editable-cell") && target.dataset.field === clipCell.field) {
+          target.textContent = clipCell.value;
+          target.dispatchEvent(new Event("blur", { bubbles: true }));
+        }
+      }
+    }
+
+    if (isCutting) {
+      for (const cell of cutCells) {
+        cell.textContent = "";
+        cell.dispatchEvent(new Event("blur", { bubbles: true }));
+        cell.classList.remove("cell-cut");
+      }
+      cutCells.clear();
+      isCutting = false;
+      clipboard = null;
+      showToast("Cut‑paste completed");
+    } else {
+      showToast("Pasted");
+    }
+  }
+
+  function hideContextMenu() {
+    contextMenu.style.display = "none";
+  }
+
+  // ── Global selection events (delegated) ──
+  document.addEventListener("click", (e) => {
+    if (!e.target.classList.contains("editable-cell")) return;
+    if (e.target.closest("#contextMenu")) return;
+    hideContextMenu();
+    const cell = e.target;
+    const isCtrl = e.ctrlKey || e.metaKey;
+    const isShift = e.shiftKey;
+
+    if (isShift && lastSelectionAnchor) {
+      clearSelection();
+      const anchorRow = parseInt(lastSelectionAnchor.dataset.row);
+      const anchorCol = parseInt(lastSelectionAnchor.dataset.col);
+      const cellRow = parseInt(cell.dataset.row);
+      const cellCol = parseInt(cell.dataset.col);
+      const rectCells = getCellsInRect(anchorRow, anchorCol, cellRow, cellCol);
+      rectCells.forEach(c => addToSelection(c));
+      return;
+    }
+
+    if (isCtrl) {
+      toggleSelection(cell);
+      if (selectedCells.has(cell)) lastSelectionAnchor = cell;
+      else lastSelectionAnchor = null;
+      return;
+    }
+
+    clearSelection();
+    addToSelection(cell);
+    lastSelectionAnchor = cell;
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const target = e.target;
+    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+    if (!document.getElementById("data-table")) return;
+    if (e.ctrlKey && e.key === "c") {
+      e.preventDefault();
+      copySelection();
+    } else if (e.ctrlKey && e.key === "x") {
+      e.preventDefault();
+      cutSelection();
+    } else if (e.ctrlKey && e.key === "v") {
+      e.preventDefault();
+      const pasteTarget = selectedCells.values().next().value || lastSelectionAnchor;
+      if (pasteTarget) pasteSelection(pasteTarget);
+    } else if (e.key === "Escape") {
+      hideContextMenu();
+      clearSelection();
+    }
+  });
+
+  // Context menu event
+  document.addEventListener("contextmenu", (e) => {
+    const cell = e.target.closest("td.editable-cell");
+    if (!cell) return;
+    e.preventDefault();
+    if (!selectedCells.has(cell)) {
+      clearSelection();
+      addToSelection(cell);
+      lastSelectionAnchor = cell;
+    }
+    contextMenu.style.display = "block";
+    contextMenu.style.left = e.clientX + "px";
+    contextMenu.style.top = e.clientY + "px";
+    contextMenu.dataset.targetRow = cell.dataset.row;
+    contextMenu.dataset.targetCol = cell.dataset.col;
+    const pasteItem = contextMenu.querySelector('[data-action="paste"]');
+    pasteItem.classList.toggle("disabled", !clipboard);
+  });
+
+  contextMenu.addEventListener("click", (e) => {
+    const menuItem = e.target.closest(".menu-item");
+    if (!menuItem) return;
+    const action = menuItem.dataset.action;
+    hideContextMenu();
+    if (action === "copy") copySelection();
+    else if (action === "cut") cutSelection();
+    else if (action === "paste") {
+      const row = parseInt(contextMenu.dataset.targetRow);
+      const col = parseInt(contextMenu.dataset.targetCol);
+      const table = document.getElementById("data-table");
+      if (table && !isNaN(row) && !isNaN(col)) {
+        const targetCell = table.querySelector(`tr[data-row="${row}"] td[data-col="${col}"]`);
+        if (targetCell) pasteSelection(targetCell);
+        else showToast("Invalid target cell");
+      }
+    } else if (action === "clear-selection") {
+      clearSelection();
+    }
   });
 
   function esc(s) {
