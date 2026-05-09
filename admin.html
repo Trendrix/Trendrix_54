@@ -32,13 +32,12 @@
     th { background:#e9f0f3; padding:0.6rem; text-align:left; font-weight:600; border: 1px solid #d0d7de; }
     td { padding:0.5rem 0.6rem; border: 1px solid #d0d7de; }
     tr:last-child td { border-bottom: 1px solid #d0d7de; }
-    .editable-cell { background:#fcfaf7; min-width:120px; outline:none; position:relative; border: 1px solid #d0d7de; }
-    .editable-cell:focus { background:#fffdf8; outline:2px solid rgba(91,122,140,0.35); }
+    .editable-cell { background:#fcfaf7; min-width:120px; border: 1px solid #d0d7de; cursor:default; user-select:none; position:relative; }
+    .editable-cell input { width:100%; padding:0.3rem; border:1px solid #5b7a8c; border-radius:4px; font-family:inherit; font-size:0.85rem; }
+    .delete-btn, .copy-btn, .copy-to-btn { font-size:0.8rem; }
     .delete-btn { background:#f8d7da; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#b23b3b; font-weight:600; }
     .copy-btn { background:#e0f0e8; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#1f6b4a; font-weight:600; margin-right:0.3rem; }
-    .copy-btn:hover { background:#cce6d9; }
     .copy-to-btn { background:#e6eef4; border:none; padding:0.3rem 0.6rem; border-radius:6px; cursor:pointer; color:#1f4b6b; font-weight:600; margin-right:0.3rem; }
-    .copy-to-btn:hover { background:#d0dde8; }
     .spinner { width:30px; height:30px; border:3px solid rgba(91,122,140,0.2); border-top-color:#5b7a8c; border-radius:50%; animation:spin 0.8s linear infinite; margin:2rem auto; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .toast { position:fixed; bottom:1rem; left:50%; transform:translateX(-50%); background:#2d6a4f; color:#fff; padding:0.7rem 1.2rem; border-radius:10px; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:999; }
@@ -46,72 +45,33 @@
     .error { color:#b23b3b; margin-top:0.5rem; text-align:center; }
     .form-card label { display:block; margin-top:0.8rem; font-weight:600; font-size:0.9rem; }
     .form-card input, .form-card textarea { width:100%; padding:0.6rem; margin-top:0.3rem; border:1px solid #ddd; border-radius:8px; }
-    .form-card textarea { min-height:80px; resize:vertical; }
     .pagination { display:flex; gap:0.3rem; margin-top:0.8rem; flex-wrap:wrap; align-items:center; }
     .pagination button { padding:0.3rem 0.6rem; border:1px solid #ccc; background:#fff; border-radius:4px; cursor:pointer; }
     .pagination button.active { background:#5b7a8c; color:#fff; border-color:#5b7a8c; }
     .pagination button:disabled { opacity:0.5; cursor:default; }
-
     /* Modals */
-    .modal-overlay {
-      position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6);
-      display: flex; align-items: center; justify-content: center; z-index: 2000;
-    }
-    .modal-box {
-      background: white; border-radius: 16px; padding: 1.5rem;
-      max-width: 700px; width: 95%; max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    }
-    .modal-box h2 { margin-bottom:1rem; color: #5b7a8c; }
-    .parent-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
-    .parent-item {
-      background: #f0f4f7; border-radius: 8px; padding: 0.6rem 1rem;
-      cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 0.5rem;
-    }
-    .parent-item:hover { background: #e2e8f0; }
-    .parent-item.selected { outline: 2px solid #5b7a8c; background: #e6eff3; }
-    .parent-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #ddd; }
-    .product-check-list { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
-    .product-check-item { display: flex; align-items: center; gap: 0.5rem; }
-    .product-check-item img { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; }
-    .product-check-item label { font-size: 0.9rem; }
-    .link-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
-    .doc-list-simple { display: flex; flex-direction: column; gap: 0.3rem; }
-    .doc-list-simple .doc-item {
-      padding: 0.5rem 1rem; border: 1px solid #e0e0e0; border-radius: 6px;
-      cursor: pointer; transition: background 0.2s;
-    }
-    .doc-list-simple .doc-item:hover { background: #f0f4f7; }
-    .doc-list-simple .doc-item.selected { background: #e6eff3; border-color: #5b7a8c; }
-
-    /* Selection & context menu styles */
-    .cell-selected {
-      background: #c3e0f4 !important;
-      outline: 1px solid #5b7a8c;
-    }
-    .cell-cut {
-      background: #f0f0f0 !important;
-      color: #999;
-      text-decoration: line-through;
-    }
-    .context-menu {
-      display: none;
-      position: fixed;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 3000;
-      min-width: 150px;
-      padding: 0.3rem 0;
-    }
-    .context-menu .menu-item {
-      padding: 0.5rem 1rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    .context-menu .menu-item:hover { background: #f0f4f7; }
-    .context-menu .menu-item.disabled { color: #999; pointer-events: none; }
+    .modal-overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:2000; }
+    .modal-box { background:#fff; border-radius:16px; padding:1.5rem; max-width:700px; width:95%; max-height:90vh; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,0.2); }
+    .modal-box h2 { margin-bottom:1rem; color:#5b7a8c; }
+    .parent-list { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
+    .parent-item { background:#f0f4f7; border-radius:8px; padding:0.6rem 1rem; cursor:pointer; display:flex; align-items:center; gap:0.5rem; }
+    .parent-item.selected { outline:2px solid #5b7a8c; background:#e6eff3; }
+    .parent-item img { width:40px; height:40px; object-fit:cover; border-radius:4px; background:#ddd; }
+    .product-check-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:1rem; }
+    .product-check-item { display:flex; align-items:center; gap:0.5rem; }
+    .product-check-item img { width:40px; height:40px; object-fit:cover; border-radius:4px; }
+    .product-check-item label { font-size:0.9rem; }
+    .link-actions { display:flex; gap:0.5rem; justify-content:flex-end; }
+    .doc-list-simple { display:flex; flex-direction:column; gap:0.3rem; }
+    .doc-list-simple .doc-item { padding:0.5rem 1rem; border:1px solid #e0e0e0; border-radius:6px; cursor:pointer; }
+    .doc-list-simple .doc-item.selected { background:#e6eff3; border-color:#5b7a8c; }
+    /* Selection styles */
+    .cell-selected { background:#c3e0f4 !important; outline:1px solid #5b7a8c; }
+    .cell-cut { background:#f0f0f0 !important; color:#999; text-decoration:line-through; }
+    .context-menu { display:none; position:fixed; background:white; border:1px solid #ccc; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:3000; min-width:150px; padding:0.3rem 0; }
+    .context-menu .menu-item { padding:0.5rem 1rem; cursor:pointer; font-size:0.9rem; }
+    .context-menu .menu-item:hover { background:#f0f4f7; }
+    .context-menu .menu-item.disabled { color:#999; pointer-events:none; }
   </style>
 </head>
 <body>
@@ -201,30 +161,11 @@
   const db = existingDb;
 
   const collectionsMap = {
-    product: {
-      name: "Product",
-      fields: ["Product Name","Affiliate Link","Image Link","Alt Image","Category","Source","Description"]
-    },
-    pinterest: {
-      name: "Pinterest",
-      fields: ["Alt Image","Link","Type"]
-    },
-    piprMap: {
-      name: "PIPR MAP",
-      fields: ["Pint ID","Product ID"],
-      parentCollection: "Pinterest",
-      parentIdField: "Pint ID"
-    },
-    instagram: {
-      name: "Instagram",
-      fields: ["Alt Image","Link","Thumbnail","Type"]
-    },
-    inprMap: {
-      name: "INPR MAP",
-      fields: ["INSTA ID","Product ID"],
-      parentCollection: "Instagram",
-      parentIdField: "INSTA ID"
-    },
+    product: { name:"Product", fields:["Product Name","Affiliate Link","Image Link","Alt Image","Category","Source","Description"] },
+    pinterest: { name:"Pinterest", fields:["Alt Image","Link","Type"] },
+    piprMap: { name:"PIPR MAP", fields:["Pint ID","Product ID"], parentCollection:"Pinterest", parentIdField:"Pint ID" },
+    instagram: { name:"Instagram", fields:["Alt Image","Link","Thumbnail","Type"] },
+    inprMap: { name:"INPR MAP", fields:["INSTA ID","Product ID"], parentCollection:"Instagram", parentIdField:"INSTA ID" },
   };
 
   let currentCollection = "product";
@@ -232,6 +173,7 @@
   let currentPage = 1;
   let recordsPerPage = 10;
 
+  // DOM refs
   const loginScreen = document.getElementById("loginScreen");
   const dashboard = document.getElementById("dashboard");
   const loginBtn = document.getElementById("loginBtn");
@@ -257,29 +199,19 @@
   let clipboard = null;
   let cutCells = new Set();
   let isCutting = false;
+  let isEditing = false;   // true when a cell is in edit mode
 
   // ── Auth ──
   loginBtn.addEventListener("click", async () => {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-      loginError.textContent = err.message;
-    }
+    try { await signInWithEmailAndPassword(auth, email, password); }
+    catch (err) { loginError.textContent = err.message; }
   });
-
   logoutBtn.addEventListener("click", () => signOut(auth));
-
   onAuthStateChanged(auth, (user) => {
-    if (user) {
-      loginScreen.classList.add("hidden");
-      dashboard.classList.remove("hidden");
-      loadTable();
-    } else {
-      loginScreen.classList.remove("hidden");
-      dashboard.classList.add("hidden");
-    }
+    if (user) { loginScreen.classList.add("hidden"); dashboard.classList.remove("hidden"); loadTable(); }
+    else { loginScreen.classList.remove("hidden"); dashboard.classList.add("hidden"); }
   });
 
   function showToast(msg) {
@@ -288,62 +220,39 @@
     setTimeout(() => toastEl.classList.remove("show"), 2500);
   }
 
-  // ── Next‑ID logic ──
+  // ── Next‑ID ──
   async function getNextId() {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
-    let maxNum = 0;
-    let bestPrefix = "";
-    let bestPad = 1;
-    const prefixCount = {};
+    let maxNum=0, bestPrefix="", bestPad=1, prefixCount={};
     snap.forEach(d => {
       const m = d.id.match(/^(.*?)(\d+)$/);
       if (!m) return;
-      const num = parseInt(m[2], 10);
-      const p = m[1];
-      const len = m[2].length;
-      if (num > maxNum || (num === maxNum && len > bestPad)) {
-        maxNum = num;
-        bestPad = len;
-      }
-      prefixCount[p] = (prefixCount[p] || 0) + 1;
+      const num = parseInt(m[2],10), p=m[1], len=m[2].length;
+      if (num>maxNum || (num===maxNum && len>bestPad)) { maxNum=num; bestPad=len; }
+      prefixCount[p]=(prefixCount[p]||0)+1;
     });
-    let bestCount = 0;
-    for (const [p, cnt] of Object.entries(prefixCount)) {
-      if (cnt > bestCount) { bestCount = cnt; bestPrefix = p; }
-    }
-    if (maxNum === 0) return "1";
-    return bestPrefix + String(maxNum + 1).padStart(bestPad || 1, "0");
+    let bestCount=0;
+    for (const [p,cnt] of Object.entries(prefixCount)) if (cnt>bestCount) { bestCount=cnt; bestPrefix=p; }
+    return maxNum===0 ? "1" : bestPrefix + String(maxNum+1).padStart(bestPad||1,'0');
   }
-
   async function generateNextMappingIds(count) {
     const collName = collectionsMap[currentCollection].name;
     const snap = await getDocs(collection(db, collName));
-    let maxNum = 0;
-    let prefix = "";
-    let padLength = 1;
+    let maxNum=0, prefix="", padLength=1;
     snap.forEach(d => {
       const m = d.id.match(/^(.*?)(\d+)$/);
       if (!m) return;
-      const num = parseInt(m[2], 10);
-      const p = m[1];
-      const len = m[2].length;
-      if (num > maxNum || (num === maxNum && len > padLength)) {
-        maxNum = num;
-        prefix = p;
-        padLength = len;
-      }
+      const num = parseInt(m[2],10), p=m[1], len=m[2].length;
+      if (num>maxNum || (num===maxNum && len>padLength)) { maxNum=num; prefix=p; padLength=len; }
     });
-    const ids = [];
-    let currentNum = maxNum + 1;
-    for (let i = 0; i < count; i++) {
-      ids.push(prefix + String(currentNum).padStart(padLength, '0'));
-      currentNum++;
-    }
+    const ids=[];
+    let cur=maxNum+1;
+    for (let i=0;i<count;i++) { ids.push(prefix + String(cur).padStart(padLength||1,'0')); cur++; }
     return ids;
   }
 
-  // ── Load & render table ──
+  // ── Load table ──
   async function loadTable() {
     clearSelection();
     tableContainer.innerHTML = '<div class="spinner"></div>';
@@ -360,53 +269,23 @@
 
   function getUniqueValues(fieldName) {
     if (currentCollection !== "product" || !currentDocs.length) return [];
-    const values = new Set();
-    currentDocs.forEach(doc => {
-      const val = (doc[fieldName] || "").trim();
-      if (val) values.add(val);
-    });
-    return Array.from(values).sort();
+    const vals = new Set();
+    currentDocs.forEach(d => { const v = (d[fieldName]||"").trim(); if (v) vals.add(v); });
+    return Array.from(vals).sort();
   }
 
+  // Dropdown setup (used for Category & Source)
   function setupDropdownForField(datalistId, fieldName, fieldSelector) {
-    const uniqueValues = getUniqueValues(fieldName);
-    if (uniqueValues.length === 0) return;
+    const unique = getUniqueValues(fieldName);
+    if (!unique.length) return;
     let datalistEl = document.getElementById(datalistId);
-    if (!datalistEl) {
-      datalistEl = document.createElement("datalist");
-      datalistEl.id = datalistId;
-      document.body.appendChild(datalistEl);
-    }
-    datalistEl.innerHTML = uniqueValues.map(v => `<option value="${esc(v)}">`).join("");
+    if (!datalistEl) { datalistEl = document.createElement("datalist"); datalistEl.id = datalistId; document.body.appendChild(datalistEl); }
+    datalistEl.innerHTML = unique.map(v => `<option value="${esc(v)}">`).join("");
     const cells = tableContainer.querySelectorAll(fieldSelector);
     cells.forEach(cell => {
-      if (cell.dataset.dropdownSetup === "true") return;
+      if (cell.dataset.dropdownSetup) return;
       cell.dataset.dropdownSetup = "true";
-      cell.addEventListener("focus", function(e) {
-        if (this.querySelector("input")) return;
-        this.contentEditable = "false";
-        const currentText = this.textContent.trim();
-        const input = document.createElement("input");
-        input.type = "text";
-        input.setAttribute("list", datalistId);
-        input.value = currentText;
-        Object.assign(input.style, {
-          width: "100%", padding: "0.3rem", border: "1px solid #ccc",
-          borderRadius: "4px", fontFamily: "inherit", fontSize: "0.85rem", background: "white"
-        });
-        this.textContent = "";
-        this.appendChild(input);
-        input.focus();
-        input.addEventListener("blur", () => {
-          const newVal = input.value.trim();
-          this.textContent = newVal || "";
-          this.contentEditable = "true";
-          this.dispatchEvent(new Event("blur", { bubbles: true }));
-        });
-        input.addEventListener("mousedown", e => e.stopPropagation());
-        input.addEventListener("keydown", (e) => { if (e.key.startsWith("Arrow")) e.stopPropagation(); });
-      });
-      cell.addEventListener("keydown", function(e) { if (this.querySelector("input")) e.stopPropagation(); });
+      cell.addEventListener("dblclick", () => beginEdit(cell, true)); // dblclick with dropdown
     });
   }
 
@@ -416,41 +295,38 @@
     const fields = coll.fields;
     if (currentDocs.length === 0) {
       let html = `<p>No documents yet.</p><button class="btn" id="addRowBtn">➕ Add First Row</button>`;
-      if (currentCollection === "inprMap" || currentCollection === "piprMap") {
+      if (currentCollection === "inprMap" || currentCollection === "piprMap")
         html += `<button class="btn small secondary" id="showLinkWizardBtn" style="margin-left:0.5rem;">🛠️ Link Wizard</button>`;
-      }
       tableContainer.innerHTML = html;
       document.getElementById("addRowBtn")?.addEventListener("click", addRow);
       document.getElementById("showLinkWizardBtn")?.addEventListener("click", openLinkWizard);
       return;
     }
-
-    const totalRecords = currentDocs.length;
-    const maxPage = Math.ceil(totalRecords / recordsPerPage);
+    const total = currentDocs.length;
+    const maxPage = Math.ceil(total / recordsPerPage);
     if (currentPage > maxPage) currentPage = maxPage;
-    const startIdx = (currentPage - 1) * recordsPerPage;
-    const endIdx = startIdx + (recordsPerPage === 0 ? totalRecords : recordsPerPage);
-    const pageDocs = (recordsPerPage === 0) ? currentDocs : currentDocs.slice(startIdx, endIdx);
+    const start = (currentPage-1) * recordsPerPage;
+    const end = (recordsPerPage===0) ? total : start + recordsPerPage;
+    const pageDocs = (recordsPerPage===0) ? currentDocs : currentDocs.slice(start, end);
 
     let html = `<div class="controls">
       <div>
         <button class="btn small" id="addRowBtn">➕ Add Row</button>
         <button class="btn small secondary" id="showFormBtn" style="margin-left:0.5rem;">📝 Form</button>
-        ${(currentCollection === "inprMap" || currentCollection === "piprMap") ? `<button class="btn small secondary" id="showLinkWizardBtn" style="margin-left:0.5rem;">🛠️ Link Wizard</button>` : ''}
+        ${(currentCollection==="inprMap"||currentCollection==="piprMap")?`<button class="btn small secondary" id="showLinkWizardBtn" style="margin-left:0.5rem;">🛠️ Link Wizard</button>`:''}
       </div>
       <div style="display:flex; align-items:center; gap:0.3rem;">
         <label style="font-size:0.85rem;">Show:</label>
         <select id="recordsPerPageSelect">
-          <option value="10" ${recordsPerPage === 10 ? "selected" : ""}>10</option>
-          <option value="20" ${recordsPerPage === 20 ? "selected" : ""}>20</option>
-          <option value="50" ${recordsPerPage === 50 ? "selected" : ""}>50</option>
-          <option value="100" ${recordsPerPage === 100 ? "selected" : ""}>100</option>
-          <option value="0" ${recordsPerPage === 0 ? "selected" : ""}>All</option>
+          <option value="10" ${recordsPerPage===10?"selected":""}>10</option>
+          <option value="20" ${recordsPerPage===20?"selected":""}>20</option>
+          <option value="50" ${recordsPerPage===50?"selected":""}>50</option>
+          <option value="100" ${recordsPerPage===100?"selected":""}>100</option>
+          <option value="0" ${recordsPerPage===0?"selected":""}>All</option>
         </select>
-        <span style="font-size:0.85rem;">(Total: ${totalRecords})</span>
+        <span style="font-size:0.85rem;">(Total: ${total})</span>
       </div>
     </div>`;
-
     html += `<table id="data-table"><thead><tr><th>ID</th>`;
     fields.forEach(f => html += `<th>${f}</th>`);
     html += `<th>Actions</th></tr></thead><tbody>`;
@@ -459,10 +335,8 @@
       html += `<tr data-row="${rowIdx}">`;
       html += `<td class="doc-id-cell" data-col="0">${esc(doc.id)}</td>`;
       fields.forEach((f, colIdx) => {
-        const col = colIdx + 1;
-        html += `<td class="editable-cell" contenteditable="true" 
-                    data-col="${col}" data-row="${rowIdx}" 
-                    data-doc-id="${esc(doc.id)}" data-field="${f}">${esc(doc[f] || "")}</td>`;
+        const col = colIdx+1;
+        html += `<td class="editable-cell" data-col="${col}" data-row="${rowIdx}" data-doc-id="${esc(doc.id)}" data-field="${f}" tabindex="0">${esc(doc[f]||"")}</td>`;
       });
       html += `<td data-col="${fields.length+1}">
         <button class="copy-btn" data-doc-id="${esc(doc.id)}">📋 Copy</button>
@@ -473,114 +347,36 @@
     });
     html += `</tbody></table>`;
 
-    if (recordsPerPage > 0 && totalRecords > recordsPerPage) {
+    if (recordsPerPage>0 && total>recordsPerPage) {
       html += `<div class="pagination">`;
-      html += `<button id="prevPageBtn" ${currentPage === 1 ? "disabled" : ""}>Previous</button>`;
-      const startPage = Math.max(1, currentPage - 2);
-      const endPage = Math.min(maxPage, currentPage + 2);
-      if (startPage > 1) html += `<button class="pageBtn" data-page="1">1</button> ...`;
-      for (let p = startPage; p <= endPage; p++) {
-        html += `<button class="pageBtn ${p === currentPage ? "active" : ""}" data-page="${p}">${p}</button>`;
-      }
-      if (endPage < maxPage) html += `... <button class="pageBtn" data-page="${maxPage}">${maxPage}</button>`;
-      html += `<button id="nextPageBtn" ${currentPage === maxPage ? "disabled" : ""}>Next</button>`;
+      html += `<button id="prevPageBtn" ${currentPage===1?"disabled":""}>Previous</button>`;
+      const sp = Math.max(1, currentPage-2), ep = Math.min(maxPage, currentPage+2);
+      if (sp>1) html += `<button class="pageBtn" data-page="1">1</button> ...`;
+      for (let p=sp; p<=ep; p++) html += `<button class="pageBtn ${p===currentPage?"active":""}" data-page="${p}">${p}</button>`;
+      if (ep<maxPage) html += `... <button class="pageBtn" data-page="${maxPage}">${maxPage}</button>`;
+      html += `<button id="nextPageBtn" ${currentPage===maxPage?"disabled":""}>Next</button>`;
       html += `</div>`;
     }
-
     tableContainer.innerHTML = html;
 
-    // Pagination events
-    document.getElementById("recordsPerPageSelect")?.addEventListener("change", (e) => {
-      recordsPerPage = parseInt(e.target.value);
-      currentPage = 1;
-      renderTable();
-    });
-    document.getElementById("prevPageBtn")?.addEventListener("click", () => { if (currentPage > 1) { currentPage--; renderTable(); } });
-    document.getElementById("nextPageBtn")?.addEventListener("click", () => { if (currentPage < maxPage) { currentPage++; renderTable(); } });
-    document.querySelectorAll(".pageBtn").forEach(btn => {
-      btn.addEventListener("click", () => { currentPage = parseInt(btn.dataset.page); renderTable(); });
-    });
+    // Pagination listeners
+    document.getElementById("recordsPerPageSelect")?.addEventListener("change", (e) => { recordsPerPage=parseInt(e.target.value); currentPage=1; renderTable(); });
+    document.getElementById("prevPageBtn")?.addEventListener("click", () => { if (currentPage>1) { currentPage--; renderTable(); } });
+    document.getElementById("nextPageBtn")?.addEventListener("click", () => { if (currentPage<maxPage) { currentPage++; renderTable(); } });
+    document.querySelectorAll(".pageBtn").forEach(b => b.addEventListener("click", () => { currentPage=parseInt(b.dataset.page); renderTable(); }));
 
-    // Inline edit
-    tableContainer.querySelectorAll(".editable-cell").forEach(cell => {
-      let orig = cell.textContent.trim();
-      cell.addEventListener("focus", () => { orig = cell.textContent.trim(); });
-      cell.addEventListener("blur", async () => {
-        const val = cell.textContent.trim();
-        if (val === orig) return;
-        const docId = cell.dataset.docId;
-        const field = cell.dataset.field;
-        try {
-          await updateDoc(doc(db, collectionsMap[currentCollection].name, docId), { [field]: val });
-          showToast("Saved");
-        } catch (err) {
-          cell.textContent = orig;
-          showToast("Error: " + err.message);
-        }
-      });
-    });
+    // Attach cell behaviours
+    attachCellBehaviours();
 
-    // Copy buttons
-    tableContainer.querySelectorAll(".copy-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const docId = btn.dataset.docId;
-        const sourceDoc = currentDocs.find(d => d.id === docId);
-        if (!sourceDoc) return showToast("Source document not found.");
-        const nextId = await getNextId();
-        const payload = {};
-        collectionsMap[currentCollection].fields.forEach(f => { payload[f] = sourceDoc[f] || ""; });
-        try {
-          await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), payload);
-          showToast(`Copied to ${nextId}`);
-          loadTable();
-        } catch (err) { showToast("Error: " + err.message); }
-      });
-    });
+    // Copy / Copy to / Delete buttons
+    tableContainer.querySelectorAll(".copy-btn").forEach(b => b.addEventListener("click", copyRow));
+    tableContainer.querySelectorAll(".copy-to-btn").forEach(b => b.addEventListener("click", openCopyToModal));
+    tableContainer.querySelectorAll(".delete-btn").forEach(b => b.addEventListener("click", deleteRow));
 
-    // Copy to… buttons
-    tableContainer.querySelectorAll(".copy-to-btn").forEach(btn => {
-      btn.addEventListener("click", openCopyToModal);
-    });
-
-    // Delete buttons
-    tableContainer.querySelectorAll(".delete-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (!confirm(`Delete ${btn.dataset.docId}?`)) return;
-        await deleteDoc(doc(db, collectionsMap[currentCollection].name, btn.dataset.docId));
-        showToast("Deleted");
-        loadTable();
-      });
-    });
-
-    // Dropdowns for Category and Source
-    if (currentCollection === "product") {
+    // Dropdown setup for Product
+    if (currentCollection==="product") {
       setupDropdownForField("categorySuggestionsList", "Category", '[data-field="Category"]');
       setupDropdownForField("sourceSuggestionsList", "Source", '[data-field="Source"]');
-    }
-
-    // Arrow-key navigation
-    const table = document.getElementById("data-table");
-    if (table) {
-      table.addEventListener("keydown", function(e) {
-        const target = e.target;
-        if (!target.classList.contains("editable-cell")) return;
-        const key = e.key;
-        if (!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(key)) return;
-        e.preventDefault();
-        const row = parseInt(target.dataset.row);
-        const col = parseInt(target.dataset.col);
-        if (isNaN(row) || isNaN(col)) return;
-        let newRow = row, newCol = col;
-        if (key === "ArrowUp") newRow = Math.max(0, row - 1);
-        if (key === "ArrowDown") newRow = row + 1;
-        if (key === "ArrowLeft") newCol = Math.max(1, col - 1);
-        if (key === "ArrowRight") newCol = col + 1;
-        const targetCell = table.querySelector(`tr[data-row="${newRow}"] td[data-col="${newCol}"]`);
-        if (targetCell && targetCell.classList.contains("editable-cell")) {
-          target.blur();
-          targetCell.focus();
-        }
-      });
     }
 
     document.getElementById("addRowBtn")?.addEventListener("click", addRow);
@@ -588,339 +384,181 @@
     document.getElementById("showLinkWizardBtn")?.addEventListener("click", openLinkWizard);
   }
 
-  async function addRow() {
-    const fields = collectionsMap[currentCollection].fields;
-    const nextId = await getNextId();
-    try {
-      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), Object.fromEntries(fields.map(f => [f, ""])));
-      showToast(`Added ${nextId}`);
-      loadTable();
-    } catch (err) { showToast("Error: " + err.message); }
-  }
+  // ── Selection & editing logic ──
+  function attachCellBehaviours() {
+    const cells = tableContainer.querySelectorAll(".editable-cell");
+    cells.forEach(cell => {
+      // Click for selection (but not during editing)
+      cell.addEventListener("mousedown", (e) => {
+        if (isEditing) return; // ignore if already editing a cell
+        // Prevent default text selection behaviour
+        e.preventDefault();
+        cell.focus(); // needed for keyboard navigation
 
-  function showForm() {
-    const fields = collectionsMap[currentCollection].fields;
-    let formHtml = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
-    formHtml += `<label>Document ID <span style="color:#b23b3b;">*</span></label><input id="formDocId" placeholder="e.g. PA0002" />`;
-    fields.forEach(f => { formHtml += `<label>${f}</label><input id="form_${f.replace(/\s/g,"_")}" />`; });
-    formHtml += `<button class="btn" id="submitFormBtn" style="margin-top:1rem;">💾 Save</button></div>`;
-    tableContainer.innerHTML = formHtml;
-    getNextId().then(id => { document.getElementById("formDocId").value = id; });
-    document.getElementById("submitFormBtn").addEventListener("click", async () => {
-      const docId = document.getElementById("formDocId").value.trim();
-      if (!docId) { showToast("Document ID required"); return; }
-      const payload = {};
-      fields.forEach(f => { payload[f] = document.getElementById(`form_${f.replace(/\s/g,"_")}`).value; });
-      try {
-        await setDoc(doc(db, collectionsMap[currentCollection].name, docId), payload);
-        showToast(`Saved ${docId}`);
-        loadTable();
-      } catch (err) { showToast("Error: " + err.message); }
-    });
-  }
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const isShift = e.shiftKey;
 
-  // ── Link Wizard ──
-  function openLinkWizard() {
-    linkWizardModal.classList.remove("hidden");
-    const mappingCollection = collectionsMap[currentCollection];
-    const parentCollectionName = mappingCollection.parentCollection;
-    const parentIdField = mappingCollection.parentIdField;
-    linkWizardContent.innerHTML = `<h2>Link Wizard: ${mappingCollection.name}</h2><div class="spinner"></div>`;
-    (async () => {
-      try {
-        const parentSnap = await getDocs(collection(db, parentCollectionName));
-        const parents = parentSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const productSnap = await getDocs(collection(db, "Product"));
-        const products = productSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        let parentImageField = parentCollectionName === "Pinterest" ? "Alt Image" : "Thumbnail";
-        let parentHtml = `<h3>Select a ${parentCollectionName} item</h3><div class="parent-list">`;
-        parents.forEach(p => {
-          const label = p.id + (p["Type"] ? ` (${p["Type"]})` : "");
-          const imgSrc = p[parentImageField] || "";
-          const imgTag = imgSrc ? `<img src="${esc(imgSrc)}" onerror="this.style.display='none'" alt="">` : '';
-          parentHtml += `<div class="parent-item" data-parent-id="${esc(p.id)}">${imgTag}<span>${esc(label)}</span></div>`;
-        });
-        parentHtml += `</div><div id="productSelectionArea" style="display:none;"><h3>Select Products to link</h3><div class="product-check-list" id="productList"></div><div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected Products</button></div></div>`;
-        linkWizardContent.innerHTML = parentHtml;
-        let selectedParentId = null;
-        document.querySelectorAll(".parent-item").forEach(item => {
-          item.addEventListener("click", () => {
-            document.querySelectorAll(".parent-item").forEach(i => i.classList.remove("selected"));
-            item.classList.add("selected");
-            selectedParentId = item.dataset.parentId;
-            const productArea = document.getElementById("productSelectionArea");
-            productArea.style.display = "block";
-            const productList = document.getElementById("productList");
-            productList.innerHTML = products.map(prod => `
-              <div class="product-check-item">
-                <input type="checkbox" id="prod_${esc(prod.id)}" value="${esc(prod.id)}">
-                <img src="${esc(prod["Image Link"] || "")}" onerror="this.style.display='none'" alt="">
-                <label for="prod_${esc(prod.id)}">${esc(prod["Product Name"] || prod.id)}</label>
-              </div>`).join("");
-          });
-        });
-        document.getElementById("linkSelectedBtn")?.addEventListener("click", async () => {
-          if (!selectedParentId) { showToast("Please select a parent first."); return; }
-          const checkboxes = document.querySelectorAll(".product-check-item input[type='checkbox']:checked");
-          if (checkboxes.length === 0) { showToast("Select at least one product."); return; }
-          const selectedProductIds = Array.from(checkboxes).map(cb => cb.value);
-          try {
-            const nextIds = await generateNextMappingIds(selectedProductIds.length);
-            const collName = collectionsMap[currentCollection].name;
-            for (let i = 0; i < selectedProductIds.length; i++) {
-              const productId = selectedProductIds[i];
-              const mappingId = nextIds[i];
-              await setDoc(doc(db, collName, mappingId), { [parentIdField]: selectedParentId, "Product ID": productId });
-            }
-            showToast(`Linked ${selectedProductIds.length} product(s) to ${selectedParentId}`);
-            linkWizardModal.classList.add("hidden");
-            loadTable();
-          } catch (err) { showToast("Error: " + err.message); }
-        });
-      } catch (err) { linkWizardContent.innerHTML += `<p class="error">Error loading data: ${err.message}</p>`; }
-    })();
-  }
+        if (isShift && lastSelectionAnchor) {
+          clearSelection();
+          const aRow = parseInt(lastSelectionAnchor.dataset.row), aCol = parseInt(lastSelectionAnchor.dataset.col);
+          const cRow = parseInt(cell.dataset.row), cCol = parseInt(cell.dataset.col);
+          getCellsInRect(aRow, aCol, cRow, cCol).forEach(addToSelection);
+          return;
+        }
+        if (isCtrl) {
+          toggleSelection(cell);
+          if (selectedCells.has(cell)) lastSelectionAnchor = cell;
+          else lastSelectionAnchor = null;
+          return;
+        }
+        // Normal click: clear selection, select this cell
+        clearSelection();
+        addToSelection(cell);
+        lastSelectionAnchor = cell;
+      });
 
-  // ── Copy to existing row modal ──
-  function openCopyToModal(e) {
-    const sourceId = e.currentTarget.dataset.docId;
-    pendingCopySourceId = sourceId;
-    const otherDocs = currentDocs.filter(d => d.id !== sourceId);
-    copyToTargetList.innerHTML = otherDocs.map(d => {
-      const label = d.id + (d["Product Name"] ? ` — ${esc(d["Product Name"])}` : "");
-      return `<div class="doc-item" data-target-id="${esc(d.id)}">${esc(label)}</div>`;
-    }).join("");
-    selectedCopyTargetId = null;
-    confirmCopyToBtn.disabled = true;
-    copyToModal.classList.remove("hidden");
-
-    copyToTargetList.querySelectorAll(".doc-item").forEach(item => {
-      item.addEventListener("click", () => {
-        copyToTargetList.querySelectorAll(".doc-item").forEach(i => i.classList.remove("selected"));
-        item.classList.add("selected");
-        selectedCopyTargetId = item.dataset.targetId;
-        confirmCopyToBtn.disabled = false;
+      // Double click / Enter to edit
+      cell.addEventListener("dblclick", () => beginEdit(cell, false));
+      cell.addEventListener("keydown", (e) => {
+        if (isEditing) return;
+        if (e.key === "Enter") {
+          e.preventDefault();
+          beginEdit(cell, false);
+        } else if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+          e.preventDefault();
+          moveFocus(e.key, cell);
+        }
       });
     });
   }
 
-  cancelCopyToBtn.addEventListener("click", () => {
-    copyToModal.classList.add("hidden");
-    pendingCopySourceId = null;
-    selectedCopyTargetId = null;
-  });
+  function beginEdit(cell, useDropdown) {
+    if (isEditing) return;
+    isEditing = true;
+    const currentText = cell.textContent.trim();
+    const input = document.createElement("input");
+    if (useDropdown && cell.dataset.field==="Category") {
+      input.setAttribute("list", "categorySuggestionsList");
+    }
+    input.value = currentText;
+    cell.textContent = "";
+    cell.appendChild(input);
+    input.focus();
+    input.addEventListener("blur", () => endEdit(cell, input));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        cell.textContent = currentText;
+        isEditing = false;
+        cell.focus();
+      }
+    });
+  }
 
-  confirmCopyToBtn.addEventListener("click", async () => {
-    if (!pendingCopySourceId || !selectedCopyTargetId) return;
-    const sourceDoc = currentDocs.find(d => d.id === pendingCopySourceId);
-    if (!sourceDoc) return showToast("Source not found.");
-    const collName = collectionsMap[currentCollection].name;
-    const payload = {};
-    collectionsMap[currentCollection].fields.forEach(f => { payload[f] = sourceDoc[f] || ""; });
-    try {
-      await updateDoc(doc(db, collName, selectedCopyTargetId), payload);
-      showToast(`Copied to ${selectedCopyTargetId}`);
-      copyToModal.classList.add("hidden");
-      pendingCopySourceId = null;
-      selectedCopyTargetId = null;
-      loadTable();
-    } catch (err) { showToast("Error: " + err.message); }
-  });
+  async function endEdit(cell, input) {
+    const newVal = input.value.trim();
+    cell.textContent = newVal;
+    isEditing = false;
+    cell.focus();
+    // Save change to Firestore
+    const docId = cell.dataset.docId;
+    const field = cell.dataset.field;
+    const orig = currentDocs.find(d => d.id===docId)?.[field]||"";
+    if (newVal !== orig) {
+      try {
+        await updateDoc(doc(db, collectionsMap[currentCollection].name, docId), { [field]: newVal });
+        showToast("Saved");
+      } catch (err) {
+        cell.textContent = orig;
+        showToast("Error: "+err.message);
+      }
+    }
+  }
 
-  // Close modals on outside click
-  linkWizardModal.addEventListener("click", (e) => { if (e.target === linkWizardModal) linkWizardModal.classList.add("hidden"); });
-  copyToModal.addEventListener("click", (e) => { if (e.target === copyToModal) copyToModal.classList.add("hidden"); });
+  function moveFocus(key, currentCell) {
+    const row = parseInt(currentCell.dataset.row);
+    const col = parseInt(currentCell.dataset.col);
+    let newRow = row, newCol = col;
+    if (key==="ArrowUp") newRow = Math.max(0, row-1);
+    else if (key==="ArrowDown") newRow = row+1;
+    else if (key==="ArrowLeft") newCol = Math.max(1, col-1);
+    else if (key==="ArrowRight") newCol = col+1;
+    const table = document.getElementById("data-table");
+    const target = table?.querySelector(`tr[data-row="${newRow}"] td[data-col="${newCol}"]`);
+    if (target && target.classList.contains("editable-cell")) {
+      target.focus();
+      // Optionally clear selection and select target (single select)
+      clearSelection();
+      addToSelection(target);
+      lastSelectionAnchor = target;
+    }
+  }
 
-  // ── Tab switching ──
-  tabBar.addEventListener("click", (e) => {
-    if (e.target.tagName !== "BUTTON") return;
-    tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-    e.target.classList.add("active");
-    currentCollection = e.target.dataset.collection;
-    recordsPerPage = 10;
-    currentPage = 1;
-    loadTable();
-  });
-
-  // ── Selection helpers ──
+  // Selection helpers
   function clearSelection() {
     selectedCells.forEach(cell => cell.classList.remove("cell-selected"));
     selectedCells.clear();
     lastSelectionAnchor = null;
-    // also clear cut marks
-    cutCells.forEach(cell => cell.classList.remove("cell-cut"));
-    cutCells.clear();
-    isCutting = false;
-    clipboard = null;  // clear clipboard on selection change? optional, but safer
   }
-
-  function addToSelection(cell) {
-    cell.classList.add("cell-selected");
-    selectedCells.add(cell);
-  }
-
-  function removeFromSelection(cell) {
-    cell.classList.remove("cell-selected");
-    selectedCells.delete(cell);
-  }
-
-  function toggleSelection(cell) {
-    if (selectedCells.has(cell)) removeFromSelection(cell);
-    else addToSelection(cell);
-  }
-
-  function getCellsInRect(row1, col1, row2, col2) {
+  function addToSelection(cell) { cell.classList.add("cell-selected"); selectedCells.add(cell); }
+  function removeFromSelection(cell) { cell.classList.remove("cell-selected"); selectedCells.delete(cell); }
+  function toggleSelection(cell) { selectedCells.has(cell) ? removeFromSelection(cell) : addToSelection(cell); }
+  function getCellsInRect(r1,c1,r2,c2) {
     const table = document.getElementById("data-table");
     if (!table) return [];
-    const minRow = Math.min(row1, row2);
-    const maxRow = Math.max(row1, row2);
-    const minCol = Math.min(col1, col2);
-    const maxCol = Math.max(col1, col2);
-    const cells = [];
-    for (let r = minRow; r <= maxRow; r++) {
-      for (let c = minCol; c <= maxCol; c++) {
+    const minRow=Math.min(r1,r2), maxRow=Math.max(r1,r2), minCol=Math.min(c1,c2), maxCol=Math.max(c1,c2);
+    const cells=[];
+    for (let r=minRow; r<=maxRow; r++)
+      for (let c=minCol; c<=maxCol; c++) {
         const cell = table.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`);
         if (cell && cell.classList.contains("editable-cell")) cells.push(cell);
       }
-    }
     return cells;
   }
 
-  // ── Context menu actions ──
+  // Context menu actions
   function copySelection() {
-    if (selectedCells.size === 0) return;
-    const sorted = Array.from(selectedCells).sort((a, b) => {
-      const ra = parseInt(a.dataset.row), ca = parseInt(a.dataset.col);
-      const rb = parseInt(b.dataset.row), cb = parseInt(b.dataset.col);
-      return ra - rb || ca - cb;
-    });
-    const grid = [];
-    let currentRow = -1;
-    let rowArray = [];
-    sorted.forEach(cell => {
+    if (selectedCells.size===0) return;
+    const sorted = Array.from(selectedCells).sort((a,b)=> parseInt(a.dataset.row)-parseInt(b.dataset.row) || parseInt(a.dataset.col)-parseInt(b.dataset.col));
+    const grid=[];
+    let curRow=-1, rowData=[];
+    sorted.forEach(cell=>{
       const r = parseInt(cell.dataset.row);
-      if (r !== currentRow) {
-        if (rowArray.length) grid.push(rowArray);
-        rowArray = [];
-        currentRow = r;
-      }
-      rowArray.push({ field: cell.dataset.field, value: cell.textContent.trim() });
+      if (r!==curRow) { if (rowData.length) grid.push(rowData); rowData=[]; curRow=r; }
+      rowData.push({field:cell.dataset.field, value:cell.textContent.trim()});
     });
-    if (rowArray.length) grid.push(rowArray);
+    if (rowData.length) grid.push(rowData);
     clipboard = grid;
     isCutting = false;
-    cutCells.forEach(c => c.classList.remove("cell-cut"));
+    cutCells.forEach(c=>c.classList.remove("cell-cut"));
     cutCells.clear();
     showToast("Copied");
   }
-
-  function cutSelection() {
-    copySelection();
-    if (clipboard) {
-      isCutting = true;
-      selectedCells.forEach(cell => {
-        cell.classList.add("cell-cut");
-        cutCells.add(cell);
-      });
-      showToast("Cut");
-    }
-  }
-
+  function cutSelection() { copySelection(); if (clipboard) { isCutting=true; selectedCells.forEach(c=>{c.classList.add("cell-cut"); cutCells.add(c);}); showToast("Cut"); } }
   async function pasteSelection(targetCell) {
-    if (!clipboard || clipboard.length === 0) return;
-    if (!targetCell || !targetCell.classList.contains("editable-cell")) return;
-
-    const startRow = parseInt(targetCell.dataset.row);
-    const startCol = parseInt(targetCell.dataset.col);
+    if (!clipboard || !targetCell || !targetCell.classList.contains("editable-cell")) return;
+    const startRow = parseInt(targetCell.dataset.row), startCol = parseInt(targetCell.dataset.col);
     const table = document.getElementById("data-table");
     if (!table) return;
-
-    for (let i = 0; i < clipboard.length; i++) {
-      const clipRow = clipboard[i];
-      for (let j = 0; j < clipRow.length; j++) {
-        const clipCell = clipRow[j];
-        const targetRow = startRow + i;
-        const targetCol = startCol + j;
-        const target = table.querySelector(`tr[data-row="${targetRow}"] td[data-col="${targetCol}"]`);
-        if (target && target.classList.contains("editable-cell") && target.dataset.field === clipCell.field) {
-          target.textContent = clipCell.value;
-          target.dispatchEvent(new Event("blur", { bubbles: true }));
+    for (let i=0;i<clipboard.length;i++) {
+      const rowData = clipboard[i];
+      for (let j=0;j<rowData.length;j++) {
+        const {field, value} = rowData[j];
+        const tCell = table.querySelector(`tr[data-row="${startRow+i}"] td[data-col="${startCol+j}"]`);
+        if (tCell && tCell.dataset.field===field) {
+          tCell.textContent = value;
+          tCell.dispatchEvent(new Event("blur",{bubbles:true}));
         }
       }
     }
-
     if (isCutting) {
-      for (const cell of cutCells) {
-        cell.textContent = "";
-        cell.dispatchEvent(new Event("blur", { bubbles: true }));
-        cell.classList.remove("cell-cut");
-      }
-      cutCells.clear();
-      isCutting = false;
-      clipboard = null;
-      showToast("Cut‑paste completed");
-    } else {
-      showToast("Pasted");
-    }
+      for (const c of cutCells) { c.textContent=""; c.classList.remove("cell-cut"); }
+      cutCells.clear(); isCutting=false; clipboard=null;
+      showToast("Cut-paste completed");
+    } else showToast("Pasted");
   }
+  function hideContextMenu() { contextMenu.style.display="none"; }
 
-  function hideContextMenu() {
-    contextMenu.style.display = "none";
-  }
-
-  // ── Global selection events (delegated) ──
-  document.addEventListener("click", (e) => {
-    if (!e.target.classList.contains("editable-cell")) return;
-    if (e.target.closest("#contextMenu")) return;
-    hideContextMenu();
-    const cell = e.target;
-    const isCtrl = e.ctrlKey || e.metaKey;
-    const isShift = e.shiftKey;
-
-    if (isShift && lastSelectionAnchor) {
-      clearSelection();
-      const anchorRow = parseInt(lastSelectionAnchor.dataset.row);
-      const anchorCol = parseInt(lastSelectionAnchor.dataset.col);
-      const cellRow = parseInt(cell.dataset.row);
-      const cellCol = parseInt(cell.dataset.col);
-      const rectCells = getCellsInRect(anchorRow, anchorCol, cellRow, cellCol);
-      rectCells.forEach(c => addToSelection(c));
-      return;
-    }
-
-    if (isCtrl) {
-      toggleSelection(cell);
-      if (selectedCells.has(cell)) lastSelectionAnchor = cell;
-      else lastSelectionAnchor = null;
-      return;
-    }
-
-    clearSelection();
-    addToSelection(cell);
-    lastSelectionAnchor = cell;
-  });
-
-  document.addEventListener("keydown", (e) => {
-    const target = e.target;
-    if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
-    if (!document.getElementById("data-table")) return;
-    if (e.ctrlKey && e.key === "c") {
-      e.preventDefault();
-      copySelection();
-    } else if (e.ctrlKey && e.key === "x") {
-      e.preventDefault();
-      cutSelection();
-    } else if (e.ctrlKey && e.key === "v") {
-      e.preventDefault();
-      const pasteTarget = selectedCells.values().next().value || lastSelectionAnchor;
-      if (pasteTarget) pasteSelection(pasteTarget);
-    } else if (e.key === "Escape") {
-      hideContextMenu();
-      clearSelection();
-    }
-  });
-
-  // Context menu event
+  // Global listeners for selection and context menu
   document.addEventListener("contextmenu", (e) => {
     const cell = e.target.closest("td.editable-cell");
     if (!cell) return;
@@ -938,30 +576,199 @@
     const pasteItem = contextMenu.querySelector('[data-action="paste"]');
     pasteItem.classList.toggle("disabled", !clipboard);
   });
-
   contextMenu.addEventListener("click", (e) => {
-    const menuItem = e.target.closest(".menu-item");
-    if (!menuItem) return;
-    const action = menuItem.dataset.action;
+    const item = e.target.closest(".menu-item");
+    if (!item) return;
     hideContextMenu();
-    if (action === "copy") copySelection();
-    else if (action === "cut") cutSelection();
-    else if (action === "paste") {
-      const row = parseInt(contextMenu.dataset.targetRow);
-      const col = parseInt(contextMenu.dataset.targetCol);
+    const action = item.dataset.action;
+    if (action==="copy") copySelection();
+    else if (action==="cut") cutSelection();
+    else if (action==="paste") {
+      const r = parseInt(contextMenu.dataset.targetRow), c = parseInt(contextMenu.dataset.targetCol);
       const table = document.getElementById("data-table");
-      if (table && !isNaN(row) && !isNaN(col)) {
-        const targetCell = table.querySelector(`tr[data-row="${row}"] td[data-col="${col}"]`);
-        if (targetCell) pasteSelection(targetCell);
-        else showToast("Invalid target cell");
+      if (table && !isNaN(r) && !isNaN(c)) {
+        const target = table.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`);
+        pasteSelection(target);
       }
-    } else if (action === "clear-selection") {
-      clearSelection();
+    } else if (action==="clear-selection") clearSelection();
+  });
+  document.addEventListener("click", (e) => {
+    if (!contextMenu.contains(e.target)) hideContextMenu();
+  });
+
+  // Keyboard shortcuts for copy/cut/paste (global, but only when not editing)
+  document.addEventListener("keydown", (e) => {
+    if (isEditing || e.target.tagName==="INPUT" || e.target.tagName==="TEXTAREA") return;
+    if (e.ctrlKey && e.key==="c") { e.preventDefault(); copySelection(); }
+    else if (e.ctrlKey && e.key==="x") { e.preventDefault(); cutSelection(); }
+    else if (e.ctrlKey && e.key==="v") {
+      e.preventDefault();
+      const target = selectedCells.values().next().value || lastSelectionAnchor;
+      if (target) pasteSelection(target);
     }
   });
 
-  function esc(s) {
-    return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  // ── Row actions ──
+  async function copyRow(e) {
+    const docId = e.currentTarget.dataset.docId;
+    const source = currentDocs.find(d => d.id===docId);
+    if (!source) return;
+    const nextId = await getNextId();
+    const payload = {};
+    collectionsMap[currentCollection].fields.forEach(f => payload[f] = source[f]||"");
+    try {
+      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), payload);
+      showToast(`Copied to ${nextId}`);
+      loadTable();
+    } catch (err) { showToast("Error: "+err.message); }
+  }
+  async function deleteRow(e) {
+    if (!confirm(`Delete ${e.currentTarget.dataset.docId}?`)) return;
+    await deleteDoc(doc(db, collectionsMap[currentCollection].name, e.currentTarget.dataset.docId));
+    showToast("Deleted"); loadTable();
+  }
+
+  // ── Copy to existing row modal ──
+  function openCopyToModal(e) {
+    pendingCopySourceId = e.currentTarget.dataset.docId;
+    const otherDocs = currentDocs.filter(d => d.id !== pendingCopySourceId);
+    copyToTargetList.innerHTML = otherDocs.map(d => {
+      const label = d.id + (d["Product Name"] ? ` — ${esc(d["Product Name"])}` : "");
+      return `<div class="doc-item" data-target-id="${esc(d.id)}">${esc(label)}</div>`;
+    }).join("");
+    selectedCopyTargetId = null;
+    confirmCopyToBtn.disabled = true;
+    copyToModal.classList.remove("hidden");
+    copyToTargetList.querySelectorAll(".doc-item").forEach(item => {
+      item.addEventListener("click", () => {
+        copyToTargetList.querySelectorAll(".doc-item").forEach(i => i.classList.remove("selected"));
+        item.classList.add("selected");
+        selectedCopyTargetId = item.dataset.targetId;
+        confirmCopyToBtn.disabled = false;
+      });
+    });
+  }
+  cancelCopyToBtn.addEventListener("click", () => { copyToModal.classList.add("hidden"); pendingCopySourceId=null; selectedCopyTargetId=null; });
+  confirmCopyToBtn.addEventListener("click", async () => {
+    if (!pendingCopySourceId || !selectedCopyTargetId) return;
+    const source = currentDocs.find(d => d.id===pendingCopySourceId);
+    if (!source) return showToast("Source not found.");
+    const collName = collectionsMap[currentCollection].name;
+    const payload = {};
+    collectionsMap[currentCollection].fields.forEach(f => payload[f] = source[f]||"");
+    try {
+      await updateDoc(doc(db, collName, selectedCopyTargetId), payload);
+      showToast(`Copied to ${selectedCopyTargetId}`);
+      copyToModal.classList.add("hidden");
+      pendingCopySourceId=null; selectedCopyTargetId=null;
+      loadTable();
+    } catch (err) { showToast("Error: "+err.message); }
+  });
+
+  // ── Link Wizard (unchanged) ──
+  function openLinkWizard() {
+    linkWizardModal.classList.remove("hidden");
+    const mappingCollection = collectionsMap[currentCollection];
+    const parentColl = mappingCollection.parentCollection;
+    const parentField = mappingCollection.parentIdField;
+    linkWizardContent.innerHTML = `<h2>Link Wizard: ${mappingCollection.name}</h2><div class="spinner"></div>`;
+    (async () => {
+      try {
+        const parentSnap = await getDocs(collection(db, parentColl));
+        const parents = parentSnap.docs.map(d => ({id:d.id,...d.data()}));
+        const prodSnap = await getDocs(collection(db, "Product"));
+        const products = prodSnap.docs.map(d => ({id:d.id,...d.data()}));
+        let imgField = parentColl==="Pinterest" ? "Alt Image" : "Thumbnail";
+        let html = `<h3>Select a ${parentColl} item</h3><div class="parent-list">`;
+        parents.forEach(p => {
+          const label = p.id + (p["Type"]?` (${p["Type"]})`:"");
+          const imgsrc = p[imgField]||"";
+          const imgTag = imgsrc ? `<img src="${esc(imgsrc)}" onerror="this.style.display='none'" alt="">` : "";
+          html += `<div class="parent-item" data-parent-id="${esc(p.id)}">${imgTag}<span>${esc(label)}</span></div>`;
+        });
+        html += `</div><div id="productSelectionArea" style="display:none;"><h3>Select Products</h3><div class="product-check-list" id="productList"></div><div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected</button></div></div>`;
+        linkWizardContent.innerHTML = html;
+        let selectedParent=null;
+        document.querySelectorAll(".parent-item").forEach(item => {
+          item.addEventListener("click", () => {
+            document.querySelectorAll(".parent-item").forEach(i => i.classList.remove("selected"));
+            item.classList.add("selected");
+            selectedParent = item.dataset.parentId;
+            const prodArea = document.getElementById("productSelectionArea");
+            prodArea.style.display = "block";
+            const prodList = document.getElementById("productList");
+            prodList.innerHTML = products.map(prod => `
+              <div class="product-check-item">
+                <input type="checkbox" id="prod_${esc(prod.id)}" value="${esc(prod.id)}">
+                <img src="${esc(prod["Image Link"]||"")}" onerror="this.style.display='none'" alt="">
+                <label for="prod_${esc(prod.id)}">${esc(prod["Product Name"]||prod.id)}</label>
+              </div>`).join("");
+          });
+        });
+        document.getElementById("linkSelectedBtn")?.addEventListener("click", async () => {
+          if (!selectedParent) { showToast("Select a parent."); return; }
+          const checks = document.querySelectorAll(".product-check-item input:checked");
+          if (!checks.length) { showToast("Select products."); return; }
+          const prodIds = Array.from(checks).map(cb => cb.value);
+          try {
+            const nextIds = await generateNextMappingIds(prodIds.length);
+            const collName = currentCollection;
+            for (let i=0;i<prodIds.length;i++) {
+              await setDoc(doc(db, collectionsMap[currentCollection].name, nextIds[i]), { [parentField]: selectedParent, "Product ID": prodIds[i] });
+            }
+            showToast(`Linked ${prodIds.length} product(s)`);
+            linkWizardModal.classList.add("hidden");
+            loadTable();
+          } catch (err) { showToast("Error: "+err.message); }
+        });
+      } catch (err) { linkWizardContent.innerHTML += `<p class="error">Error: ${err.message}</p>`; }
+    })();
+  }
+  linkWizardModal.addEventListener("click", (e) => { if (e.target===linkWizardModal) linkWizardModal.classList.add("hidden"); });
+  copyToModal.addEventListener("click", (e) => { if (e.target===copyToModal) copyToModal.classList.add("hidden"); });
+
+  // ── Tab switch ──
+  tabBar.addEventListener("click", (e) => {
+    if (e.target.tagName !== "BUTTON") return;
+    tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    e.target.classList.add("active");
+    currentCollection = e.target.dataset.collection;
+    recordsPerPage = 10;
+    currentPage = 1;
+    loadTable();
+  });
+
+  function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  // Add row
+  async function addRow() {
+    const fields = collectionsMap[currentCollection].fields;
+    const nextId = await getNextId();
+    try {
+      await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), Object.fromEntries(fields.map(f=>[f,""])));
+      showToast(`Added ${nextId}`); loadTable();
+    } catch (err) { showToast("Error: "+err.message); }
+  }
+
+  // Form
+  function showForm() {
+    const fields = collectionsMap[currentCollection].fields;
+    let html = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
+    html += `<label>Document ID <span style="color:#b23b3b;">*</span></label><input id="formDocId" placeholder="e.g. PA0002" />`;
+    fields.forEach(f => html += `<label>${f}</label><input id="form_${f.replace(/\s/g,"_")}" />`);
+    html += `<button class="btn" id="submitFormBtn" style="margin-top:1rem;">💾 Save</button></div>`;
+    tableContainer.innerHTML = html;
+    getNextId().then(id => { document.getElementById("formDocId").value = id; });
+    document.getElementById("submitFormBtn").addEventListener("click", async () => {
+      const docId = document.getElementById("formDocId").value.trim();
+      if (!docId) { showToast("Document ID required"); return; }
+      const payload = {};
+      fields.forEach(f => { payload[f] = document.getElementById(`form_${f.replace(/\s/g,"_")}`).value; });
+      try {
+        await setDoc(doc(db, collectionsMap[currentCollection].name, docId), payload);
+        showToast(`Saved ${docId}`); loadTable();
+      } catch (err) { showToast("Error: "+err.message); }
+    });
   }
 </script>
 </body>
