@@ -471,58 +471,141 @@
     }
 
     // ----- Edit with Dropdown (Category/Source) -----
-    async function beginEdit(cell, useDropdown) {
-      if (isEditing || !cell.classList.contains("editable-cell")) return;
-      isEditing = true;
-      const old = cell.textContent.trim();
-      const field = cell.dataset.field;
+// ----- Edit with Dropdown (Category/Source) – NOW WITH "ADD NEW" OPTION -----
+async function beginEdit(cell, useDropdown) {
+  if (isEditing || !cell.classList.contains("editable-cell")) return;
+  isEditing = true;
+  const old = cell.textContent.trim();
+  const field = cell.dataset.field;
 
-      if (useDropdown && (field === "Category" || field === "Source")) {
-        const uniqueVals = getUniqueValues(field);
-        const sel = document.createElement("select");
-        sel.style.width = "100%";
-        sel.style.padding = "0.3rem";
-        sel.innerHTML = `<option value="">-- Select --</option>` + uniqueVals.map(v => `<option value="${esc(v)}" ${v===old?"selected":""}>${esc(v)}</option>`).join("");
-        cell.textContent = "";
-        cell.appendChild(sel);
-        sel.focus();
-        const finish = (save = true) => {
-          const newVal = sel.value;
-          sel.remove();
-          cell.textContent = newVal;
-          isEditing = false;
-          cell.focus();
-          if (save) saveCellEdit(cell, old, newVal);
-        };
-        sel.addEventListener("blur", () => finish());
-        sel.addEventListener("keydown", (e) => {
-          if (e.key === "Escape") { sel.value = old; finish(false); }
-          if (e.key === "Tab" || e.key === "Enter") { e.preventDefault(); finish(); }
-        });
-        return;
+  if (useDropdown && (field === "Category" || field === "Source")) {
+    const uniqueVals = getUniqueValues(field);
+    
+    // Create a wrapper container
+    const wrapper = document.createElement("div");
+    wrapper.style.display = "flex";
+    wrapper.style.gap = "4px";
+    wrapper.style.width = "100%";
+    
+    // Create the dropdown select
+    const sel = document.createElement("select");
+    sel.style.flex = "1";
+    sel.style.padding = "0.3rem";
+    sel.style.border = "1px solid var(--primary)";
+    sel.style.borderRadius = "4px";
+    sel.style.fontFamily = "inherit";
+    sel.style.fontSize = "0.85rem";
+    sel.innerHTML = `<option value="">-- Select or type below --</option>` + 
+      uniqueVals.map(v => `<option value="${esc(v)}" ${v===old?"selected":""}>${esc(v)}</option>`).join("");
+    
+    // Create the "new value" text input
+    const newInput = document.createElement("input");
+    newInput.type = "text";
+    newInput.placeholder = "Or type new value...";
+    newInput.style.flex = "1";
+    newInput.style.padding = "0.3rem";
+    newInput.style.border = "1px solid var(--primary)";
+    newInput.style.borderRadius = "4px";
+    newInput.style.fontFamily = "inherit";
+    newInput.style.fontSize = "0.85rem";
+    
+    // If the current value is not in the dropdown, pre-fill the input
+    if (old && !uniqueVals.includes(old)) {
+      newInput.value = old;
+      sel.value = "";
+    }
+    
+    // When user types in the input, clear the select
+    newInput.addEventListener("input", () => {
+      if (newInput.value.trim()) {
+        sel.value = "";
       }
-
-      const inp = document.createElement("input");
-      if (useDropdown && (field === "Category" || field === "Source")) {
-        const listId = field === "Category" ? "categorySuggestionsList" : "sourceSuggestionsList";
-        inp.setAttribute("list", listId);
+    });
+    
+    // When user selects from dropdown, clear the input
+    sel.addEventListener("change", () => {
+      if (sel.value) {
+        newInput.value = "";
       }
-      inp.value = old;
-      cell.textContent = "";
-      cell.appendChild(inp);
-      inp.focus();
-      inp.addEventListener("blur", () => {
-        const newVal = inp.value.trim();
-        inp.remove();
-        cell.textContent = newVal;
+    });
+    
+    wrapper.appendChild(sel);
+    wrapper.appendChild(newInput);
+    
+    cell.textContent = "";
+    cell.appendChild(wrapper);
+    
+    // Focus the select first
+    sel.focus();
+    
+    const finish = (save = true) => {
+      // Get the final value: input takes priority, then select
+      let newVal = newInput.value.trim();
+      if (!newVal) {
+        newVal = sel.value;
+      }
+      
+      wrapper.remove();
+      cell.textContent = newVal;
+      isEditing = false;
+      cell.focus();
+      if (save) saveCellEdit(cell, old, newVal);
+    };
+    
+    // Save on blur (clicking outside)
+    wrapper.addEventListener("blur", (e) => {
+      // Small delay to allow click events on select/input
+      setTimeout(() => {
+        if (!wrapper.contains(document.activeElement)) {
+          finish();
+        }
+      }, 150);
+    });
+    
+    // Keyboard shortcuts
+    wrapper.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        // Cancel – restore old value
+        wrapper.remove();
+        cell.textContent = old;
         isEditing = false;
         cell.focus();
-        saveCellEdit(cell, old, newVal);
-      });
-      inp.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") { inp.remove(); cell.textContent = old; isEditing = false; cell.focus(); }
-      });
-    }
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        finish();
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        finish();
+      }
+    });
+    
+    return;
+  }
+
+  // Normal text editing (unchanged)
+  const inp = document.createElement("input");
+  if (useDropdown && (field === "Category" || field === "Source")) {
+    const listId = field === "Category" ? "categorySuggestionsList" : "sourceSuggestionsList";
+    inp.setAttribute("list", listId);
+  }
+  inp.value = old;
+  cell.textContent = "";
+  cell.appendChild(inp);
+  inp.focus();
+  inp.addEventListener("blur", () => {
+    const newVal = inp.value.trim();
+    inp.remove();
+    cell.textContent = newVal;
+    isEditing = false;
+    cell.focus();
+    saveCellEdit(cell, old, newVal);
+  });
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { inp.remove(); cell.textContent = old; isEditing = false; cell.focus(); }
+  });
+}
 
     async function saveCellEdit(cell, oldValue, newValue) {
       if (newValue === oldValue) return;
