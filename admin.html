@@ -250,7 +250,7 @@
       return Array.from(vals).sort();
     }
 
-    // ----- Table Rendering (checkbox column, no per-row actions) -----
+    // ----- Table Rendering (checkbox column, no per-row action buttons) -----
     async function loadTable() {
       clearSelection();
       tableContainer.innerHTML = '<div class="spinner"></div>';
@@ -376,7 +376,7 @@
       document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
     }
 
-    // ----- Cell behaviours, selection, editing (unchanged except col indices shifted) -----
+    // ----- Cell behaviours, selection, editing (unchanged) -----
     function attachCellBehaviours() {
       const cells = tableContainer.querySelectorAll(".editable-cell, .doc-id-cell");
       cells.forEach(cell => {
@@ -536,7 +536,7 @@
       }
     }
 
-    // ----- Internal Clipboard (Copy/Cut/Paste) – cell level -----
+    // ----- Internal Clipboard (Copy/Cut/Paste) – NO field matching restriction -----
     function copySelection() {
       if (selectedCells.size===0) return;
       const sorted = Array.from(selectedCells).sort((a,b)=>parseInt(a.dataset.row)-parseInt(b.dataset.row)||parseInt(a.dataset.col)-parseInt(b.dataset.col));
@@ -571,32 +571,46 @@
       for (let i=0; i<clipboard.length; i++) {
         const rowData = clipboard[i];
         for (let j=0; j<rowData.length; j++) {
-          const {field, value, isId} = rowData[j];
-          if (isId) continue;
+          const {value, isId} = rowData[j];
+          if (isId) continue;   // never paste over a Document ID cell
           const tr = startRow + i, tc = startCol + j;
           const tCell = table.querySelector(`tr[data-row="${tr}"] td[data-col="${tc}"]`);
-          if (tCell && tCell.classList.contains("editable-cell") && tCell.dataset.field === field) {
+          if (tCell && tCell.classList.contains("editable-cell")) {
+            // Previously we insisted tCell.dataset.field === field – REMOVED.
+            // Now any editable cell can receive the paste.
             tCell.textContent = value;
-            await updateDoc(doc(db, collName, tCell.dataset.docId), {[field]:value}).catch(()=>{});
+            const field = tCell.dataset.field;
+            const docId = tCell.dataset.docId;
+            try {
+              await updateDoc(doc(db, collName, docId), { [field]: value });
+            } catch (e) {
+              // silently ignore write errors; the cell still shows the new value
+            }
             updatedCount++;
           }
         }
       }
+
+      // If this was a cut operation, clear the source cells
       if (isCutting) {
         for (const c of cutCells) {
-          c.textContent = ""; c.classList.remove("cell-cut");
-          await updateDoc(doc(db, collName, c.dataset.docId), {[c.dataset.field]:""}).catch(()=>{});
+          c.textContent = "";
+          c.classList.remove("cell-cut");
+          const field = c.dataset.field;
+          const docId = c.dataset.docId;
+          try {
+            await updateDoc(doc(db, collName, docId), { [field]: "" });
+          } catch (e) {}
         }
-        cutCells.clear(); isCutting=false; clipboard=null;
+        cutCells.clear();
+        isCutting = false;
+        clipboard = null;
       }
-      if (updatedCount === 0) {
-        showToast("Pasted 0 cells – target fields do not match source");
-      } else {
-        showToast(`Pasted ${updatedCount} cell(s)`);
-      }
+
+      showToast(updatedCount === 0 ? "No cells pasted" : `Pasted ${updatedCount} cell(s)`);
     }
 
-    // ----- Context Menu -----
+    // ----- Context Menu (unchanged) -----
     function hideContextMenu() { contextMenu.style.display = "none"; }
     document.addEventListener("contextmenu", (e) => {
       const cell = e.target.closest(".editable-cell,.doc-id-cell");
@@ -634,7 +648,7 @@
       if (action==="copy") copySelection();
       else if (action==="cut") cutSelection();
       else if (action==="paste") {
-        const r=parseInt(contextMenu.dataset.targetRow), c=parseInt(contextMenu.dataset.targetCol);
+        const r = parseInt(contextMenu.dataset.targetRow), c = parseInt(contextMenu.dataset.targetCol);
         const t = document.getElementById("data-table");
         if (t && !isNaN(r) && !isNaN(c)) {
           const target = t.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`);
@@ -644,7 +658,7 @@
     });
     document.addEventListener("click", (e) => { if (!contextMenu.contains(e.target)) hideContextMenu(); });
 
-    // Keyboard shortcuts
+    // Keyboard shortcuts (unchanged)
     document.addEventListener("keydown", (e) => {
       if (isEditing || e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
       if (e.ctrlKey && e.key==="c") { e.preventDefault(); copySelection(); }
@@ -657,7 +671,6 @@
     });
 
     // ----- Row‑level operations (no per‑row buttons) -----
-    // Delete selected rows using checkboxes
     async function deleteSelectedRows() {
       const checkboxes = document.querySelectorAll(".row-checkbox:checked");
       if (checkboxes.length === 0) {
@@ -712,9 +725,51 @@
 
     // Link Wizard (unchanged)
     function openLinkWizard() {
-      // exactly same as previous implementation
-      // (I've kept it identical – omitted for brevity but it's present)
-      // It's included in the full answer below.
+      linkWizardModal.classList.remove("hidden");
+      const mapColl = collectionsMap[currentCollection], parentColl = mapColl.parentCollection, parentField = mapColl.parentIdField;
+      linkWizardContent.innerHTML = `<h2>Link Wizard: ${mapColl.name}</h2><div class="spinner"></div>`;
+      (async () => {
+        try {
+          const parents = (await getDocs(collection(db, parentColl))).docs.map(d=>({id:d.id,...d.data()}));
+          const products = (await getDocs(collection(db, "Product"))).docs.map(d=>({id:d.id,...d.data()}));
+          const imgField = parentColl==="Pinterest"?"Alt Image":"Thumbnail";
+          let html = `<h3>Select a ${parentColl} item</h3><div class="parent-list">`;
+          parents.forEach(p => {
+            const label = p.id + (p["Type"]?` (${p["Type"]})`:"");
+            const imgSrc = p[imgField]||"";
+            const img = imgSrc ? `<img src="${esc(imgSrc)}" onerror="this.style.display='none'" alt="">` : "";
+            html += `<div class="parent-item" data-parent-id="${esc(p.id)}">${img}<span>${esc(label)}</span></div>`;
+          });
+          html += `</div><div id="productSelectionArea" style="display:none;"><h3>Select Products</h3><div class="product-check-list" id="productList"></div><div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected</button></div></div>`;
+          linkWizardContent.innerHTML = html;
+          let selParent = null;
+          document.querySelectorAll(".parent-item").forEach(item => {
+            item.addEventListener("click", () => {
+              document.querySelectorAll(".parent-item").forEach(i=>i.classList.remove("selected"));
+              item.classList.add("selected"); selParent = item.dataset.parentId;
+              document.getElementById("productSelectionArea").style.display = "block";
+              document.getElementById("productList").innerHTML = products.map(prod => `
+                <div class="product-check-item">
+                  <input type="checkbox" id="prod_${esc(prod.id)}" value="${esc(prod.id)}">
+                  <img src="${esc(prod["Image Link"]||"")}" onerror="this.style.display='none'" alt="">
+                  <label for="prod_${esc(prod.id)}">${esc(prod["Product Name"]||prod.id)}</label>
+                </div>`).join("");
+            });
+          });
+          document.getElementById("linkSelectedBtn")?.addEventListener("click", async () => {
+            if (!selParent) { showToast("Select a parent."); return; }
+            const checkedProdIds = Array.from(document.querySelectorAll(".product-check-item input:checked")).map(cb=>cb.value);
+            if (!checkedProdIds.length) { showToast("Select at least one product."); return; }
+            const nextIds = await generateNextMappingIds(checkedProdIds.length);
+            for (let i=0;i<checkedProdIds.length;i++) {
+              await setDoc(doc(db, mapColl.name, nextIds[i]), { [parentField]: selParent, "Product ID": checkedProdIds[i] });
+            }
+            showToast(`Linked ${checkedProdIds.length} product(s)`);
+            linkWizardModal.classList.add("hidden");
+            loadTable();
+          });
+        } catch (err) { linkWizardContent.innerHTML += `<p class="error">Error: ${err.message}</p>`; }
+      })();
     }
 
     // ----- External Paste Modal (unchanged) -----
