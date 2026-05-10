@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Trendrix Admin (Mobile)</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+      --primary: #5b7a8c; --primary-dark: #3d5660; --bg: #f7f4f0; --card-bg: #ffffff;
+      --text: #2e2e2e; --muted: #5a5a5a; --danger: #b23b3b; --success: #2d6a4f;
+      --border: #d0d7de; --radius: 20px; --shadow: 0 6px 20px rgba(0,0,0,0.08);
+    }
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height:100vh; }
+    .hidden { display: none !important; }
+
+    /* Login & Dashboard – centered, max width for larger screens */
+    #loginScreen, #dashboard { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1rem; }
+
+    .card { background: var(--card-bg); border-radius: var(--radius); padding:1.5rem; box-shadow: var(--shadow); width:100%; max-width:500px; }
+    .wide-card { max-width:1150px; margin:0 auto; }
+
+    h1 { color: var(--primary); text-align:center; margin-bottom:0.8rem; font-size:2rem; }
+    input, button, select, textarea { font-family:inherit; }
+
+    /* Inputs – bigger for fingers */
+    input[type="email"], input[type="password"], input[type="text"] {
+      width:100%; padding:0.9rem 1rem; border:1px solid #ddd; border-radius:12px; margin-bottom:0.8rem;
+      font-size:1rem; background:white;
+    }
+
+    .btn {
+      display:inline-flex; align-items:center; justify-content:center;
+      padding:0.8rem 1.6rem; background:var(--primary); color:#fff;
+      border:none; border-radius:12px; font-weight:600; cursor:pointer;
+      transition: background 0.2s; font-size:1rem; min-width:44px; min-height:44px;
+    }
+    .btn:hover { background: var(--primary-dark); }
+    .btn.small { padding:0.5rem 1rem; font-size:0.9rem; }
+    .btn.danger { background: var(--danger); }
+    .btn.danger:hover { background:#8f2e2e; }
+    .btn.secondary { background:#6e6e6e; }
+    .btn.secondary:hover { background:#555; }
+
+    .top-bar {
+      display:flex; justify-content:space-between; align-items:center;
+      flex-wrap:wrap; gap:0.8rem; margin-bottom:1.5rem;
+    }
+    .tab-bar {
+      display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:1.2rem;
+      overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch;
+    }
+    .tab-bar button {
+      padding:0.6rem 1.2rem; border:1px solid #ddd; background:#fff;
+      border-radius:20px; cursor:pointer; font-weight:500; white-space:nowrap;
+      font-size:0.9rem;
+    }
+    .tab-bar button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+
+    .controls {
+      display:flex; justify-content:space-between; align-items:center;
+      flex-wrap:wrap; gap:0.5rem; margin-bottom:0.8rem;
+    }
+
+    select { padding:0.5rem 0.6rem; border-radius:8px; border:1px solid #ccc; font-size:0.9rem; }
+
+    #tableWrapper {
+      overflow-x:auto; margin-top:0.5rem; border-radius:12px;
+      border:1px solid var(--border); -webkit-overflow-scrolling:touch;
+    }
+    table { width:100%; border-collapse:collapse; font-size:0.9rem; table-layout:fixed; min-width:600px; }
+    th, td { padding:0.6rem 0.8rem; border:1px solid var(--border); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    th { background:#e9f0f3; text-align:left; font-weight:600; position:relative; user-select:none; }
+    .editable-cell { background:#fcfaf7; cursor:cell; user-select:none; }
+    .doc-id-cell { background:#f4f4f4; color:#555; font-weight:500; cursor:cell; user-select:none; }
+    .editable-cell input, .editable-cell select {
+      width:100%; padding:0.4rem; border:1px solid var(--primary); border-radius:4px;
+      font-family:inherit; font-size:0.9rem; overflow:visible; text-overflow:clip; background:white;
+    }
+    .checkbox-cell { width: 40px; text-align: center; }
+    input[type="checkbox"] { transform: scale(1.3); margin: 0.3rem; }
+
+    .spinner {
+      width:40px; height:40px; border:4px solid rgba(91,122,140,0.2);
+      border-top-color:var(--primary); border-radius:50%; animation:spin 0.8s linear infinite;
+      margin:2rem auto;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .toast {
+      position:fixed; bottom:1rem; left:50%; transform:translateX(-50%);
+      background:var(--success); color:#fff; padding:0.8rem 1.5rem; border-radius:12px;
+      opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:9999; font-size:1rem;
+    }
+    .toast.show { opacity:1; }
+
+    .error { color:var(--danger); margin-top:0.5rem; text-align:center; }
+    .pagination {
+      display:flex; gap:0.3rem; margin-top:0.8rem; flex-wrap:wrap; align-items:center;
+      justify-content:center;
+    }
+    .pagination button {
+      padding:0.4rem 0.8rem; border:1px solid #ccc; background:#fff;
+      border-radius:6px; cursor:pointer; font-size:0.9rem;
+    }
+    .pagination button.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .pagination button:disabled { opacity:0.5; cursor:default; }
+
+    .form-card label { display:block; margin-top:1rem; font-weight:600; font-size:1rem; }
+    .form-card input, .form-card textarea { width:100%; padding:0.7rem; margin-top:0.3rem; border:1px solid #ddd; border-radius:8px; }
+
+    /* Modals – full‑screen on mobile */
+    .modal-overlay {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;
+      z-index:2000; padding:0.5rem;
+    }
+    .modal-box {
+      background:#fff; border-radius:16px; padding:1.5rem; max-width:95vw; width:100%;
+      max-height:90vh; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,0.2);
+    }
+    .modal-box h2 { margin-bottom:1rem; color:var(--primary); font-size:1.5rem; }
+
+    .link-actions { display:flex; gap:0.5rem; justify-content:flex-end; flex-wrap:wrap; }
+    .parent-list { display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem; }
+    .parent-item {
+      background:#f0f4f7; border-radius:10px; padding:0.8rem 1rem; cursor:pointer;
+      display:flex; align-items:center; gap:0.8rem; font-size:0.95rem;
+    }
+    .parent-item.selected { outline:3px solid var(--primary); background:#e6eff3; }
+    .parent-item img { width:50px; height:50px; object-fit:cover; border-radius:6px; background:#ddd; }
+    .product-check-list { display:flex; flex-direction:column; gap:0.6rem; margin-bottom:1rem; }
+    .product-check-item { display:flex; align-items:center; gap:0.8rem; font-size:0.95rem; }
+    .product-check-item img { width:45px; height:45px; object-fit:cover; border-radius:6px; }
+    .product-check-item input { transform: scale(1.2); }
+    .doc-list-simple { display:flex; flex-direction:column; gap:0.4rem; }
+    .doc-list-simple .doc-item { padding:0.6rem 1rem; border:1px solid #e0e0e0; border-radius:8px; cursor:pointer; }
+    .doc-list-simple .doc-item.selected { background:#e6eff3; border-color:var(--primary); }
+
+    .cell-selected { background:#c3e0f4 !important; outline:2px solid var(--primary); }
+    .cell-cut { background:#f0f0f0 !important; color:#999; text-decoration:line-through; }
+
+    .context-menu {
+      display:none; position:fixed; background:white; border:1px solid #ccc;
+      border-radius:12px; box-shadow:0 4px 16px rgba(0,0,0,0.15); z-index:3000;
+      min-width:180px; padding:0.4rem 0; font-size:1rem;
+    }
+    .context-menu .menu-item { padding:0.7rem 1.2rem; cursor:pointer; }
+    .context-menu .menu-item:hover { background:#f0f4f7; }
+    .context-menu .menu-item.disabled { color:#999; pointer-events:none; }
+
+    .resize-handle {
+      position:absolute; top:0; right:0; width:12px; height:100%;
+      cursor:col-resize; z-index:10; background:transparent;
+    }
+    th:hover .resize-handle { background:rgba(0,0,0,0.05); }
+  </style>
+</head>
+<body>
+  <div id="loginScreen">
+    <div class="card">
+      <h1>🔐 Trendrix Admin</h1>
+      <input type="email" id="email" placeholder="Admin email" autocomplete="email">
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+      <button class="btn" id="loginBtn" style="width:100%;">Log in</button>
+      <p id="loginError" class="error"></p>
+    </div>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <div class="wide-card">
+      <div class="top-bar">
+        <h1 style="font-size:1.6rem;">📊 Trendrix Admin</h1>
+        <button class="btn danger small" id="logoutBtn">Log out</button>
+      </div>
+      <div class="tab-bar" id="tabBar">
+        <button class="active" data-collection="product">🛍️ Product</button>
+        <button data-collection="pinterest">📌 Pinterest</button>
+        <button data-collection="piprMap">🔗 PIPR MAP</button>
+        <button data-collection="instagram">📸 Instagram</button>
+        <button data-collection="inprMap">🔗 INPR MAP</button>
+      </div>
+      <div id="tableContainer"><div class="spinner"></div></div>
+    </div>
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- Modals (same as desktop, but mobile‑friendly by default via CSS) -->
+  <div id="linkWizardModal" class="modal-overlay hidden">
+    <div class="modal-box"><div id="linkWizardContent"></div></div>
+  </div>
+  <div id="copyToModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>📤 Copy to Existing Row</h2>
+      <p>Select a target document to overwrite with data from the selected source.</p>
+      <div id="copyToTargetList" class="doc-list-simple"></div>
+      <div class="link-actions" style="margin-top:1rem;">
+        <button class="btn secondary" id="cancelCopyTo">Cancel</button>
+        <button class="btn" id="confirmCopyTo" disabled>Copy to Selected</button>
+      </div>
+    </div>
+  </div>
+  <div id="externalPasteModal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>📋 Paste Tab‑Separated Data</h2>
+      <p>Paste rows below (tab‑separated). First column = Document ID.</p>
+      <textarea id="pasteTextarea" rows="8" style="width:100%; font-size:0.9rem;" placeholder="ID&#9;Field1&#9;Field2..."></textarea>
+      <br><br>
+      <label><input type="checkbox" id="pasteSkipHeader"> Skip first row (headers)</label>
+      <div class="link-actions" style="margin-top:1rem;">
+        <button class="btn secondary" id="cancelPasteBtn">Cancel</button>
+        <button class="btn" id="submitPasteBtn">Import</button>
+      </div>
+    </div>
+  </div>
+  <div id="contextMenu" class="context-menu">
+    <div class="menu-item" data-action="copy">📋 Copy</div>
+    <div class="menu-item" data-action="cut">✂️ Cut</div>
+    <div class="menu-item" data-action="paste">📋 Paste</div>
+    <div class="menu-item" data-action="clear-selection">🚫 Clear Selection</div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
+      "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
+      "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+    }
+  }
+  </script>
+  <script type="module">
+    import { initializeApp } from "firebase/app";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+    import { getFirestore, collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+    import { db as existingDb } from "./firebase-config.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGrnXhgeZpwPVA3-y0UN8UnqvZt_48nMw",
+      authDomain: "trendrix-54.firebaseapp.com",
+      projectId: "trendrix-54",
+      storageBucket: "trendrix-54.firebasestorage.app",
+      messagingSenderId: "739868376692",
+      appId: "1:739868376692:web:65429fb612076cc64b5b21",
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = existingDb;
+
+    const collectionsMap = {
+      product: { name: "Product", fields: ["Product Name","Affiliate Link","Image Link","Alt Image","Category","Source","Description"] },
+      pinterest: { name:"Pinterest", fields:["Alt Image","Link","Type"] },
+      piprMap: { name:"PIPR MAP", fields:["Pint ID","Product ID"], parentCollection:"Pinterest", parentIdField:"Pint ID" },
+      instagram: { name:"Instagram", fields:["Alt Image","Link","Thumbnail","Type"] },
+      inprMap: { name:"INPR MAP", fields:["INSTA ID","Product ID"], parentCollection:"Instagram", parentIdField:"INSTA ID" },
+    };
+
+    let currentCollection = "product", currentDocs = [], currentPage = 1, recordsPerPage = 10;
+    const loginScreen = document.getElementById("loginScreen");
+    const dashboard = document.getElementById("dashboard");
+    const tableContainer = document.getElementById("tableContainer");
+    const toastEl = document.getElementById("toast");
+    const tabBar = document.getElementById("tabBar");
+    const contextMenu = document.getElementById("contextMenu");
+    const externalPasteModal = document.getElementById("externalPasteModal");
+    const linkWizardModal = document.getElementById("linkWizardModal");
+    const linkWizardContent = document.getElementById("linkWizardContent");
+
+    let selectedCells = new Set(), lastSelectionAnchor = null, clipboard = null, cutCells = new Set(), isCutting = false;
+    let isEditing = false, isDragging = false, dragStartCell = null;
+
+    // ----- Auth -----
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      try { await signInWithEmailAndPassword(auth, document.getElementById("email").value.trim(), document.getElementById("password").value); }
+      catch (err) { document.getElementById("loginError").textContent = err.message; }
+    });
+    document.getElementById("logoutBtn").addEventListener("click", () => signOut(auth));
+    onAuthStateChanged(auth, (user) => {
+      if (user) { loginScreen.classList.add("hidden"); dashboard.classList.remove("hidden"); loadTable(); }
+      else { loginScreen.classList.remove("hidden"); dashboard.classList.add("hidden"); }
+    });
+
+    // ----- Utilities -----
+    function showToast(msg) { toastEl.textContent = msg; toastEl.classList.add("show"); setTimeout(() => toastEl.classList.remove("show"), 2500); }
+    function esc(s) { return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+    // ----- ID Generation -----
+    async function getNextId() {
+      const collName = collectionsMap[currentCollection].name;
+      const snap = await getDocs(collection(db, collName));
+      let maxNum=0, prefix="", pad=1, pfxCnt={};
+      snap.forEach(d => {
+        const m = d.id.match(/^(.*?)(\d+)$/);
+        if (!m) return;
+        const n=parseInt(m[2],10), p=m[1], l=m[2].length;
+        if (n>maxNum || (n===maxNum && l>pad)) { maxNum=n; pad=l; }
+        pfxCnt[p]=(pfxCnt[p]||0)+1;
+      });
+      let best=0;
+      for (const [p,cnt] of Object.entries(pfxCnt)) if (cnt>best) { best=cnt; prefix=p; }
+      return maxNum===0 ? "1" : prefix + String(maxNum+1).padStart(pad||1,'0');
+    }
+    async function generateNextMappingIds(count) {
+      const collName = collectionsMap[currentCollection].name;
+      const snap = await getDocs(collection(db, collName));
+      let maxNum=0, prefix="", pad=1;
+      snap.forEach(d => {
+        const m = d.id.match(/^(.*?)(\d+)$/);
+        if (!m) return;
+        const n=parseInt(m[2],10), p=m[1], l=m[2].length;
+        if (n>maxNum || (n===maxNum && l>pad)) { maxNum=n; prefix=p; pad=l; }
+      });
+      let cur=maxNum+1;
+      const ids = [];
+      for (let i=0;i<count;i++) ids.push(prefix + String(cur++).padStart(pad||1,'0'));
+      return ids;
+    }
+    function getUniqueValues(fieldName) {
+      if (currentCollection !== "product" || !currentDocs.length) return [];
+      const vals = new Set();
+      currentDocs.forEach(d => { const v = (d[fieldName]||"").trim(); if (v) vals.add(v); });
+      return Array.from(vals).sort();
+    }
+
+    // ----- Table Rendering -----
+    async function loadTable() {
+      clearSelection();
+      tableContainer.innerHTML = '<div class="spinner"></div>';
+      try {
+        const snap = await getDocs(collection(db, collectionsMap[currentCollection].name));
+        currentDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        currentPage = 1;
+        renderTable();
+      } catch (err) { tableContainer.innerHTML = `<p class="error">Error: ${err.message}</p>`; }
+    }
+
+    function renderTable() {
+      clearSelection();
+      const coll = collectionsMap[currentCollection], fields = coll.fields;
+      if (!currentDocs.length) {
+        let html = `<p style="text-align:center; padding:2rem;">No documents yet.</p>
+          <button class="btn" id="addRowBtn" style="display:block; margin:0 auto;">➕ Add First Row</button>`;
+        if (currentCollection === "inprMap" || currentCollection === "piprMap") html += `<button class="btn small secondary" id="showLinkWizardBtn" style="display:block; margin:0.5rem auto;">🛠️ Link Wizard</button>`;
+        tableContainer.innerHTML = html;
+        document.getElementById("addRowBtn")?.addEventListener("click", addRow);
+        document.getElementById("showLinkWizardBtn")?.addEventListener("click", openLinkWizard);
+        return;
+      }
+
+      const total = currentDocs.length, maxPage = Math.ceil(total / recordsPerPage);
+      if (currentPage > maxPage) currentPage = maxPage;
+      const start = (currentPage-1)*recordsPerPage, end = recordsPerPage===0 ? total : start+recordsPerPage;
+      const pageDocs = recordsPerPage===0 ? currentDocs : currentDocs.slice(start, end);
+
+      let html = `
+        <div class="controls" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; flex-wrap:wrap; gap:0.4rem; justify-content:center;">
+            <button class="btn small" id="addRowBtn">➕ Add Row</button>
+            <button class="btn small secondary" id="showFormBtn">📝 Form</button>
+            ${(currentCollection==="inprMap"||currentCollection==="piprMap") ? `<button class="btn small secondary" id="showLinkWizardBtn">🛠️ Link Wizard</button>` : ''}
+            <button class="btn small secondary" id="pasteExternalBtn">📋 Paste External</button>
+            <button class="btn small danger" id="deleteSelectedBtn">🗑️ Delete Selected</button>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem; justify-content:center; margin-top:0.5rem;">
+            <label style="font-size:0.9rem;">Show:</label>
+            <select id="recordsPerPageSelect">
+              <option value="10" ${recordsPerPage===10?"selected":""}>10</option>
+              <option value="20" ${recordsPerPage===20?"selected":""}>20</option>
+              <option value="50" ${recordsPerPage===50?"selected":""}>50</option>
+              <option value="100" ${recordsPerPage===100?"selected":""}>100</option>
+              <option value="0" ${recordsPerPage===0?"selected":""}>All</option>
+            </select>
+            <span style="font-size:0.9rem;">(Total: ${total})</span>
+          </div>
+        </div>`;
+
+      html += `<div id="tableWrapper"><table id="data-table"><thead><tr>`;
+      html += `<th style="width:44px;"><input type="checkbox" id="selectAllCheckbox" title="Select all"></th>`;
+      html += `<th data-field="__id__">Document ID<div class="resize-handle"></div></th>`;
+      fields.forEach(f => html += `<th data-field="${f}">${f}<div class="resize-handle"></div></th>`);
+      html += `</tr></thead><tbody>`;
+
+      pageDocs.forEach((doc, rowIdx) => {
+        html += `<tr data-row="${rowIdx}">`;
+        html += `<td class="checkbox-cell"><input type="checkbox" class="row-checkbox" data-doc-id="${esc(doc.id)}"></td>`;
+        html += `<td class="doc-id-cell" data-col="1" data-row="${rowIdx}" data-doc-id="${esc(doc.id)}">${esc(doc.id)}</td>`;
+        fields.forEach((f, colIdx) => {
+          const col = colIdx + 2;
+          html += `<td class="editable-cell" data-col="${col}" data-row="${rowIdx}" data-doc-id="${esc(doc.id)}" data-field="${f}" tabindex="0">${esc(doc[f]||"")}</td>`;
+        });
+        html += `</tr>`;
+      });
+      html += `</tbody></table></div>`;
+
+      if (recordsPerPage>0 && total>recordsPerPage) {
+        html += `<div class="pagination">
+          <button id="prevPageBtn" ${currentPage===1?"disabled":""}>Previous</button>`;
+        const sp = Math.max(1, currentPage-2), ep = Math.min(maxPage, currentPage+2);
+        if (sp>1) html += `<button class="pageBtn" data-page="1">1</button> ...`;
+        for (let p=sp; p<=ep; p++) html += `<button class="pageBtn ${p===currentPage?"active":""}" data-page="${p}">${p}</button>`;
+        if (ep<maxPage) html += `... <button class="pageBtn" data-page="${maxPage}">${maxPage}</button>`;
+        html += `<button id="nextPageBtn" ${currentPage===maxPage?"disabled":""}>Next</button></div>`;
+      }
+
+      tableContainer.innerHTML = html;
+
+      addColumnResize();
+      attachCellBehaviours();
+
+      document.getElementById("recordsPerPageSelect")?.addEventListener("change", (e) => { recordsPerPage = parseInt(e.target.value); currentPage = 1; renderTable(); });
+      document.getElementById("prevPageBtn")?.addEventListener("click", () => { if (currentPage>1) { currentPage--; renderTable(); } });
+      document.getElementById("nextPageBtn")?.addEventListener("click", () => { if (currentPage<maxPage) { currentPage++; renderTable(); } });
+      document.querySelectorAll(".pageBtn").forEach(b => b.addEventListener("click", () => { currentPage = parseInt(b.dataset.page); renderTable(); }));
+
+      document.getElementById("addRowBtn")?.addEventListener("click", addRow);
+      document.getElementById("showFormBtn")?.addEventListener("click", showForm);
+      document.getElementById("showLinkWizardBtn")?.addEventListener("click", openLinkWizard);
+      document.getElementById("pasteExternalBtn")?.addEventListener("click", () => externalPasteModal.classList.remove("hidden"));
+      document.getElementById("deleteSelectedBtn")?.addEventListener("click", deleteSelectedRows);
+
+      const selectAll = document.getElementById("selectAllCheckbox");
+      selectAll?.addEventListener("change", () => { const checked = selectAll.checked; document.querySelectorAll(".row-checkbox").forEach(cb => cb.checked = checked); });
+    }
+
+    function addColumnResize() {
+      document.querySelectorAll(".resize-handle").forEach(h => {
+        h.addEventListener("mousedown", initResize);
+        h.addEventListener("touchstart", initResize, {passive:false});
+      });
+    }
+    function initResize(e) {
+      e.preventDefault();
+      const th = e.target.closest("th");
+      const startX = e.touches ? e.touches[0].clientX : e.clientX, startWidth = th.offsetWidth;
+      const move = (ev) => { th.style.width = Math.max(50, startWidth + ((ev.touches?ev.touches[0].clientX:ev.clientX)-startX)) + "px"; };
+      const up = () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", up); };
+      document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
+    }
+
+    function attachCellBehaviours() {
+      const cells = tableContainer.querySelectorAll(".editable-cell, .doc-id-cell");
+      cells.forEach(cell => {
+        cell.addEventListener("mousedown", onCellPointerDown);
+        cell.addEventListener("touchstart", onCellPointerDown, { passive: false });
+        if (cell.classList.contains("editable-cell")) {
+          cell.addEventListener("dblclick", () => {
+            const field = cell.dataset.field;
+            if ((field === "Category" || field === "Source") && currentCollection === "product") beginEdit(cell, true);
+            else beginEdit(cell, false);
+          });
+          cell.addEventListener("keydown", (e) => {
+            if (isEditing) return;
+            if (e.key === "Enter" || e.key === "F2") {
+              e.preventDefault();
+              const field = cell.dataset.field;
+              if ((field === "Category" || field === "Source") && currentCollection === "product") beginEdit(cell, true);
+              else beginEdit(cell, false);
+            } else if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
+              e.preventDefault(); moveFocus(e.key, cell);
+            }
+          });
+        }
+      });
+      document.addEventListener("mousemove", onPointerMove);
+      document.addEventListener("mouseup", onPointerUp);
+      document.addEventListener("touchmove", onPointerMove, {passive:false});
+      document.addEventListener("touchend", onPointerUp);
+    }
+
+    function onCellPointerDown(e) {
+      if (isEditing) return;
+      e.preventDefault();
+      const cell = e.currentTarget;
+      const ctrl = e.ctrlKey||e.metaKey, shift = e.shiftKey;
+      if (shift && lastSelectionAnchor) {
+        clearSelection();
+        getCellsInRect(parseInt(lastSelectionAnchor.dataset.row), parseInt(lastSelectionAnchor.dataset.col),
+                       parseInt(cell.dataset.row), parseInt(cell.dataset.col)).forEach(c => addToSelection(c));
+        lastSelectionAnchor = cell; dragStartCell = null; return;
+      }
+      if (ctrl) {
+        toggleSelection(cell);
+        lastSelectionAnchor = selectedCells.has(cell) ? cell : null;
+        dragStartCell = null; return;
+      }
+      clearSelection(); addToSelection(cell); lastSelectionAnchor = cell; dragStartCell = cell; isDragging = true;
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging || !dragStartCell) return;
+      const x = e.touches ? e.touches[0].clientX : e.clientX, y = e.touches ? e.touches[0].clientY : e.clientY;
+      const cell = document.elementFromPoint(x,y)?.closest(".editable-cell,.doc-id-cell");
+      if (!cell) return;
+      clearSelection();
+      getCellsInRect(parseInt(dragStartCell.dataset.row), parseInt(dragStartCell.dataset.col),
+                     parseInt(cell.dataset.row), parseInt(cell.dataset.col)).forEach(c => addToSelection(c));
+      lastSelectionAnchor = cell;
+    }
+    function onPointerUp() { isDragging = false; dragStartCell = null; }
+
+    function clearSelection() { selectedCells.forEach(c=>c.classList.remove("cell-selected","cell-cut")); selectedCells.clear(); }
+    function addToSelection(c) { c.classList.add("cell-selected"); selectedCells.add(c); }
+    function removeFromSelection(c) { c.classList.remove("cell-selected"); selectedCells.delete(c); }
+    function toggleSelection(c) { selectedCells.has(c) ? removeFromSelection(c) : addToSelection(c); }
+    function getCellsInRect(r1,c1,r2,c2) {
+      const t = document.getElementById("data-table"); if (!t) return [];
+      const minR=Math.min(r1,r2), maxR=Math.max(r1,r2), minC=Math.min(c1,c2), maxC=Math.max(c1,c2);
+      const cells = [];
+      for (let r=minR; r<=maxR; r++) for (let c=minC; c<=maxC; c++) {
+        const cell = t.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`);
+        if (cell && (cell.classList.contains("editable-cell")||cell.classList.contains("doc-id-cell"))) cells.push(cell);
+      }
+      return cells;
+    }
+
+    function moveFocus(key, cell) {
+      const r=parseInt(cell.dataset.row), c=parseInt(cell.dataset.col); let nr=r, nc=c;
+      if (key==="ArrowUp") nr = Math.max(0, r-1);
+      else if (key==="ArrowDown") nr = r+1;
+      else if (key==="ArrowLeft") nc = Math.max(0, c-1);
+      else if (key==="ArrowRight") nc = c+1;
+      const target = document.querySelector(`#data-table tr[data-row="${nr}"] td[data-col="${nc}"]`);
+      if (target) { target.focus(); clearSelection(); addToSelection(target); lastSelectionAnchor=target; }
+    }
+
+    // ----- Edit with Dropdown (Category/Source) – "+ Add new" via prompt (ONE prompt only) -----
+    async function beginEdit(cell, useDropdown) {
+      if (isEditing || !cell.classList.contains("editable-cell")) return;
+      isEditing = true;
+      const old = cell.textContent.trim();
+      const field = cell.dataset.field;
+
+      if (useDropdown && (field === "Category" || field === "Source")) {
+        const uniqueVals = getUniqueValues(field);
+        const sel = document.createElement("select");
+        sel.style.width = "100%";
+        sel.style.padding = "0.5rem";
+        sel.style.border = "2px solid var(--primary)";
+        sel.style.borderRadius = "6px";
+        sel.style.fontFamily = "inherit";
+        sel.style.fontSize = "1rem";
+        sel.style.background = "white";
+
+        let optionsHtml = uniqueVals.map(v => `<option value="${esc(v)}" ${v===old?"selected":""}>${esc(v)}</option>`).join("");
+        optionsHtml += `<option value="__add_new__" style="font-weight:bold; color:var(--primary);">+ Add new</option>`;
+        sel.innerHTML = optionsHtml;
+        if (old && !uniqueVals.includes(old)) {
+          sel.innerHTML = `<option value="${esc(old)}" selected>${esc(old)}</option>` + sel.innerHTML;
+        }
+
+        cell.textContent = "";
+        cell.appendChild(sel);
+        sel.focus();
+
+        let promptShown = false;
+
+        const finish = async (save = true) => {
+          let newVal = sel.value;
+          if (newVal === "__add_new__" && !promptShown) {
+            promptShown = true;
+            const input = prompt("Enter new value for " + field + ":");
+            if (input === null) newVal = old;
+            else {
+              newVal = input.trim();
+              if (newVal === "") newVal = old;
+            }
+          }
+          sel.remove();
+          cell.textContent = newVal;
+          isEditing = false;
+          cell.focus();
+          if (save && newVal !== old) saveCellEdit(cell, old, newVal);
+        };
+
+        sel.addEventListener("change", () => {
+          if (sel.value === "__add_new__" && !promptShown) {
+            promptShown = true;
+            const input = prompt("Enter new value for " + field + ":");
+            if (input === null) sel.value = old;
+            else {
+              const newVal = input.trim();
+              if (newVal) {
+                const newOption = document.createElement("option");
+                newOption.value = newVal;
+                newOption.textContent = newVal;
+                newOption.selected = true;
+                sel.insertBefore(newOption, sel.querySelector('option[value="__add_new__"]'));
+              } else sel.value = old;
+            }
+          }
+        });
+
+        sel.addEventListener("blur", () => finish());
+        sel.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            sel.value = old;
+            sel.remove();
+            cell.textContent = old;
+            isEditing = false;
+            cell.focus();
+          }
+          if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); finish(); }
+        });
+
+        return;
+      }
+
+      // Normal text editing
+      const inp = document.createElement("input");
+      inp.value = old;
+      inp.style.width = "100%";
+      inp.style.padding = "0.5rem";
+      inp.style.border = "2px solid var(--primary)";
+      inp.style.borderRadius = "6px";
+      inp.style.fontSize = "1rem";
+      cell.textContent = "";
+      cell.appendChild(inp);
+      inp.focus();
+      inp.addEventListener("blur", () => {
+        const newVal = inp.value.trim();
+        inp.remove();
+        cell.textContent = newVal;
+        isEditing = false;
+        cell.focus();
+        saveCellEdit(cell, old, newVal);
+      });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { inp.remove(); cell.textContent = old; isEditing = false; cell.focus(); }
+      });
+    }
+
+    async function saveCellEdit(cell, oldValue, newValue) {
+      if (newValue === oldValue) return;
+      const docId = cell.dataset.docId, field = cell.dataset.field;
+      try {
+        await updateDoc(doc(db, collectionsMap[currentCollection].name, docId), { [field]: newValue });
+        const docInCache = currentDocs.find(d => d.id === docId);
+        if (docInCache) docInCache[field] = newValue;
+        showToast("Saved");
+      } catch (err) {
+        cell.textContent = oldValue;
+        showToast("Error: " + err.message);
+      }
+    }
+
+    // ----- Internal Clipboard -----
+    function copySelection() {
+      if (selectedCells.size===0) return;
+      const sorted = Array.from(selectedCells).sort((a,b)=>parseInt(a.dataset.row)-parseInt(b.dataset.row)||parseInt(a.dataset.col)-parseInt(b.dataset.col));
+      let grid=[], curR=-1, rowArr=[];
+      sorted.forEach(cell => {
+        const r = parseInt(cell.dataset.row);
+        if (r!==curR) { if (rowArr.length) grid.push(rowArr); rowArr=[]; curR=r; }
+        rowArr.push({ field: cell.dataset.field || "__id__", value: cell.textContent.trim(), isId: cell.classList.contains("doc-id-cell") });
+      });
+      if (rowArr.length) grid.push(rowArr);
+      clipboard = grid; isCutting = false;
+      cutCells.forEach(c=>c.classList.remove("cell-cut")); cutCells.clear();
+      showToast("Copied to clipboard");
+    }
+    function cutSelection() {
+      if (selectedCells.size===0) return;
+      copySelection();
+      if (clipboard) {
+        isCutting = true;
+        selectedCells.forEach(c => { c.classList.add("cell-cut"); cutCells.add(c); });
+        showToast("Cut – paste to apply");
+      }
+    }
+    async function pasteSelection(targetCell) {
+      if (!clipboard || !clipboard.length || !targetCell) return;
+      const startRow = parseInt(targetCell.dataset.row), startCol = parseInt(targetCell.dataset.col);
+      const table = document.getElementById("data-table"); if (!table) return;
+      const collName = collectionsMap[currentCollection].name;
+      let updatedCount = 0;
+      for (let i=0; i<clipboard.length; i++) {
+        const rowData = clipboard[i];
+        for (let j=0; j<rowData.length; j++) {
+          const {value, isId} = rowData[j];
+          if (isId) continue;
+          const tr = startRow + i, tc = startCol + j;
+          const tCell = table.querySelector(`tr[data-row="${tr}"] td[data-col="${tc}"]`);
+          if (tCell && tCell.classList.contains("editable-cell")) {
+            tCell.textContent = value;
+            const field = tCell.dataset.field;
+            const docId = tCell.dataset.docId;
+            try { await updateDoc(doc(db, collName, docId), { [field]: value }); } catch (e) {}
+            updatedCount++;
+          }
+        }
+      }
+      if (isCutting) {
+        for (const c of cutCells) {
+          c.textContent = ""; c.classList.remove("cell-cut");
+          const field = c.dataset.field;
+          const docId = c.dataset.docId;
+          try { await updateDoc(doc(db, collName, docId), { [field]: "" }); } catch (e) {}
+        }
+        cutCells.clear(); isCutting=false; clipboard=null;
+      }
+      showToast(updatedCount === 0 ? "No cells pasted" : `Pasted ${updatedCount} cell(s)`);
+    }
+
+    // ----- Context Menu & Keyboard -----
+    function hideContextMenu() { contextMenu.style.display = "none"; }
+    document.addEventListener("contextmenu", (e) => {
+      const cell = e.target.closest(".editable-cell,.doc-id-cell");
+      if (!cell) return;
+      e.preventDefault();
+      if (!selectedCells.has(cell)) { clearSelection(); addToSelection(cell); lastSelectionAnchor = cell; }
+      contextMenu.style.display = "block";
+      contextMenu.style.left = Math.min(e.clientX, window.innerWidth-180) + "px";
+      contextMenu.style.top = Math.min(e.clientY, window.innerHeight-200) + "px";
+      contextMenu.dataset.targetRow = cell.dataset.row; contextMenu.dataset.targetCol = cell.dataset.col;
+      contextMenu.querySelector('[data-action="paste"]').classList.toggle("disabled", !clipboard);
+    });
+    let longPressTimer;
+    document.addEventListener("touchstart", (e) => {
+      const cell = e.target.closest(".editable-cell,.doc-id-cell");
+      if (!cell) return;
+      longPressTimer = setTimeout(() => {
+        e.preventDefault();
+        if (!selectedCells.has(cell)) { clearSelection(); addToSelection(cell); lastSelectionAnchor = cell; }
+        const rect = cell.getBoundingClientRect();
+        contextMenu.style.display = "block";
+        contextMenu.style.left = Math.min(rect.left, window.innerWidth-180) + "px";
+        contextMenu.style.top = Math.min(rect.bottom+6, window.innerHeight-200) + "px";
+        contextMenu.dataset.targetRow = cell.dataset.row; contextMenu.dataset.targetCol = cell.dataset.col;
+        contextMenu.querySelector('[data-action="paste"]').classList.toggle("disabled", !clipboard);
+      }, 600);
+    }, {passive:true});
+    document.addEventListener("touchend", () => clearTimeout(longPressTimer));
+    document.addEventListener("touchmove", () => clearTimeout(longPressTimer));
+    contextMenu.addEventListener("click", (e) => {
+      const item = e.target.closest(".menu-item"); if (!item) return;
+      hideContextMenu();
+      const action = item.dataset.action;
+      if (action==="copy") copySelection();
+      else if (action==="cut") cutSelection();
+      else if (action==="paste") {
+        const r = parseInt(contextMenu.dataset.targetRow), c = parseInt(contextMenu.dataset.targetCol);
+        const t = document.getElementById("data-table");
+        if (t && !isNaN(r) && !isNaN(c)) { const target = t.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`); if (target) pasteSelection(target); }
+      } else if (action==="clear-selection") clearSelection();
+    });
+    document.addEventListener("click", (e) => { if (!contextMenu.contains(e.target)) hideContextMenu(); });
+    document.addEventListener("keydown", (e) => {
+      if (isEditing || e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
+      if (e.ctrlKey && e.key==="c") { e.preventDefault(); copySelection(); }
+      else if (e.ctrlKey && e.key==="x") { e.preventDefault(); cutSelection(); }
+      else if (e.ctrlKey && e.key==="v") {
+        e.preventDefault();
+        const target = selectedCells.values().next().value || lastSelectionAnchor;
+        if (target) pasteSelection(target);
+      }
+    });
+
+    // ----- Row operations -----
+    async function deleteSelectedRows() {
+      const checkboxes = document.querySelectorAll(".row-checkbox:checked");
+      if (checkboxes.length === 0) { showToast("No rows selected."); return; }
+      if (!confirm(`Permanently delete ${checkboxes.length} document(s)?`)) return;
+      const collName = collectionsMap[currentCollection].name;
+      let errorCount = 0;
+      for (const cb of checkboxes) { try { await deleteDoc(doc(db, collName, cb.dataset.docId)); } catch (err) { errorCount++; console.error(err); } }
+      showToast(errorCount ? `Deleted ${checkboxes.length - errorCount}, ${errorCount} errors.` : `Deleted ${checkboxes.length} document(s).`);
+      loadTable();
+    }
+    async function addRow() {
+      const fields = collectionsMap[currentCollection].fields;
+      const nextId = await getNextId();
+      try { await setDoc(doc(db, collectionsMap[currentCollection].name, nextId), Object.fromEntries(fields.map(f=>[f,""]))); showToast(`Added ${nextId}`); loadTable(); }
+      catch (err) { showToast("Error: "+err.message); }
+    }
+    function showForm() {
+      const fields = collectionsMap[currentCollection].fields;
+      let formHtml = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
+      formHtml += `<label>Document ID <span style="color:#b23b3b;">*</span></label><input id="formDocId" placeholder="e.g. PA0002" />`;
+      fields.forEach(f => formHtml += `<label>${f}</label><input id="form_${f.replace(/\s/g,"_")}" />`);
+      formHtml += `<button class="btn" id="submitFormBtn" style="margin-top:1rem; width:100%;">💾 Save</button></div>`;
+      tableContainer.innerHTML = formHtml;
+      getNextId().then(id => { document.getElementById("formDocId").value = id; });
+      document.getElementById("submitFormBtn").addEventListener("click", async () => {
+        const docId = document.getElementById("formDocId").value.trim();
+        if (!docId) { showToast("Document ID required"); return; }
+        const payload = {};
+        fields.forEach(f => { payload[f] = document.getElementById(`form_${f.replace(/\s/g,"_")}`).value; });
+        try { await setDoc(doc(db, collectionsMap[currentCollection].name, docId), payload); showToast(`Saved ${docId}`); loadTable(); }
+        catch (err) { showToast("Error: "+err.message); }
+      });
+    }
+
+    // ----- Link Wizard (fully restored) -----
+    function openLinkWizard() {
+      linkWizardModal.classList.remove("hidden");
+      const mapColl = collectionsMap[currentCollection], parentColl = mapColl.parentCollection, parentField = mapColl.parentIdField;
+      linkWizardContent.innerHTML = `<h2>Link Wizard: ${mapColl.name}</h2><div class="spinner"></div>`;
+      (async () => {
+        try {
+          const parents = (await getDocs(collection(db, parentColl))).docs.map(d=>({id:d.id,...d.data()}));
+          const products = (await getDocs(collection(db, "Product"))).docs.map(d=>({id:d.id,...d.data()}));
+          const imgField = parentColl==="Pinterest"?"Alt Image":"Thumbnail";
+          let html = `<h3>Select a ${parentColl} item</h3><div class="parent-list">`;
+          parents.forEach(p => {
+            const label = p.id + (p["Type"]?` (${p["Type"]})`:"");
+            const imgSrc = p[imgField]||"";
+            const img = imgSrc ? `<img src="${esc(imgSrc)}" onerror="this.style.display='none'" alt="">` : "";
+            html += `<div class="parent-item" data-parent-id="${esc(p.id)}">${img}<span>${esc(label)}</span></div>`;
+          });
+          html += `</div><div id="productSelectionArea" style="display:none;"><h3>Select Products</h3><div class="product-check-list" id="productList"></div><div class="link-actions"><button class="btn" id="linkSelectedBtn">🔗 Link Selected</button></div></div>`;
+          linkWizardContent.innerHTML = html;
+          let selParent = null;
+          document.querySelectorAll(".parent-item").forEach(item => {
+            item.addEventListener("click", () => {
+              document.querySelectorAll(".parent-item").forEach(i=>i.classList.remove("selected"));
+              item.classList.add("selected"); selParent = item.dataset.parentId;
+              document.getElementById("productSelectionArea").style.display = "block";
+              document.getElementById("productList").innerHTML = products.map(prod => `
+                <div class="product-check-item">
+                  <input type="checkbox" id="prod_${esc(prod.id)}" value="${esc(prod.id)}">
+                  <img src="${esc(prod["Image Link"]||"")}" onerror="this.style.display='none'" alt="">
+                  <label for="prod_${esc(prod.id)}">${esc(prod["Product Name"]||prod.id)}</label>
+                </div>`).join("");
+            });
+          });
+          document.getElementById("linkSelectedBtn")?.addEventListener("click", async () => {
+            if (!selParent) { showToast("Select a parent."); return; }
+            const checkedProdIds = Array.from(document.querySelectorAll(".product-check-item input:checked")).map(cb=>cb.value);
+            if (!checkedProdIds.length) { showToast("Select at least one product."); return; }
+            const nextIds = await generateNextMappingIds(checkedProdIds.length);
+            for (let i=0;i<checkedProdIds.length;i++) {
+              await setDoc(doc(db, mapColl.name, nextIds[i]), { [parentField]: selParent, "Product ID": checkedProdIds[i] });
+            }
+            showToast(`Linked ${checkedProdIds.length} product(s)`);
+            linkWizardModal.classList.add("hidden");
+            loadTable();
+          });
+        } catch (err) { linkWizardContent.innerHTML += `<p class="error">Error: ${err.message}</p>`; }
+      })();
+    }
+
+    // External Paste Modal
+    document.getElementById("cancelPasteBtn").addEventListener("click", () => externalPasteModal.classList.add("hidden"));
+    document.getElementById("submitPasteBtn").addEventListener("click", async () => {
+      const text = document.getElementById("pasteTextarea").value.trim();
+      const skipHeader = document.getElementById("pasteSkipHeader").checked;
+      if (!text) { showToast("No data pasted."); return; }
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (skipHeader && lines.length) lines.shift();
+      const fields = collectionsMap[currentCollection].fields;
+      const collName = collectionsMap[currentCollection].name;
+      const errors = [];
+      for (const line of lines) {
+        const parts = line.split('\t');
+        if (parts.length < 1) continue;
+        const docId = parts[0].trim();
+        if (!docId) { errors.push("Row skipped: missing Document ID"); continue; }
+        const payload = {};
+        fields.forEach((f, i) => { payload[f] = parts[i+1] ? parts[i+1].trim() : ''; });
+        try { await setDoc(doc(db, collName, docId), payload); } catch (err) { errors.push(`Error on ID "${docId}": ${err.message}`); }
+      }
+      externalPasteModal.classList.add("hidden");
+      showToast(errors.length ? `Done with ${errors.length} errors` : `Imported ${lines.length} row(s)`);
+      loadTable();
+    });
+
+    tabBar.addEventListener("click", (e) => {
+      if (e.target.tagName !== "BUTTON") return;
+      tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+      e.target.classList.add("active");
+      currentCollection = e.target.dataset.collection;
+      recordsPerPage = 10; currentPage = 1;
+      loadTable();
+    });
+    document.querySelectorAll(".modal-overlay").forEach(modal => {
+      modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
+    });
+  </script>
+</body>
+</html>
