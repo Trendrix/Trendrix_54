@@ -99,7 +99,7 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <!-- Modals (Link Wizard, CopyTo, External Paste) -->
+  <!-- Modals -->
   <div id="linkWizardModal" class="modal-overlay hidden">
     <div class="modal-box"><div id="linkWizardContent"></div></div>
   </div>
@@ -178,6 +178,8 @@
     const tabBar = document.getElementById("tabBar");
     const contextMenu = document.getElementById("contextMenu");
     const externalPasteModal = document.getElementById("externalPasteModal");
+    const linkWizardModal = document.getElementById("linkWizardModal");
+    const linkWizardContent = document.getElementById("linkWizardContent");
 
     let selectedCells = new Set(), lastSelectionAnchor = null, clipboard = null, cutCells = new Set(), isCutting = false;
     let isEditing = false, isDragging = false, dragStartCell = null;
@@ -250,7 +252,7 @@
       return Array.from(vals).sort();
     }
 
-    // ----- Table Rendering (checkbox column, no per-row action buttons) -----
+    // ----- Table Rendering -----
     async function loadTable() {
       clearSelection();
       tableContainer.innerHTML = '<div class="spinner"></div>';
@@ -314,7 +316,7 @@
         html += `<td class="checkbox-cell"><input type="checkbox" class="row-checkbox" data-doc-id="${esc(doc.id)}"></td>`;
         html += `<td class="doc-id-cell" data-col="1" data-row="${rowIdx}" data-doc-id="${esc(doc.id)}">${esc(doc.id)}</td>`;
         fields.forEach((f, colIdx) => {
-          const col = colIdx + 2; // after checkbox and doc-id
+          const col = colIdx + 2;
           html += `<td class="editable-cell" data-col="${col}" data-row="${rowIdx}" data-doc-id="${esc(doc.id)}" data-field="${f}" tabindex="0">${esc(doc[f]||"")}</td>`;
         });
         html += `</tr>`;
@@ -352,7 +354,6 @@
       document.getElementById("pasteExternalBtn")?.addEventListener("click", () => externalPasteModal.classList.remove("hidden"));
       document.getElementById("deleteSelectedBtn")?.addEventListener("click", deleteSelectedRows);
 
-      // Select all checkbox logic
       const selectAll = document.getElementById("selectAllCheckbox");
       selectAll?.addEventListener("change", () => {
         const checked = selectAll.checked;
@@ -360,7 +361,7 @@
       });
     }
 
-    // ----- Column resize (unchanged) -----
+    // ----- Column resize -----
     function addColumnResize() {
       document.querySelectorAll(".resize-handle").forEach(h => {
         h.addEventListener("mousedown", initResize);
@@ -376,7 +377,7 @@
       document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
     }
 
-    // ----- Cell behaviours, selection, editing (unchanged) -----
+    // ----- Cell behaviours, selection, editing -----
     function attachCellBehaviours() {
       const cells = tableContainer.querySelectorAll(".editable-cell, .doc-id-cell");
       cells.forEach(cell => {
@@ -470,142 +471,139 @@
       if (target) { target.focus(); clearSelection(); addToSelection(target); lastSelectionAnchor=target; }
     }
 
-    // ----- Edit with Dropdown (Category/Source) -----
-// ----- Edit with Dropdown (Category/Source) – NOW WITH "ADD NEW" OPTION -----
-async function beginEdit(cell, useDropdown) {
-  if (isEditing || !cell.classList.contains("editable-cell")) return;
-  isEditing = true;
-  const old = cell.textContent.trim();
-  const field = cell.dataset.field;
+    // ----- Edit with Dropdown (Category/Source) with "add new" option -----
+    async function beginEdit(cell, useDropdown) {
+      if (isEditing || !cell.classList.contains("editable-cell")) return;
+      isEditing = true;
+      const old = cell.textContent.trim();
+      const field = cell.dataset.field;
 
-  if (useDropdown && (field === "Category" || field === "Source")) {
-    const uniqueVals = getUniqueValues(field);
-    
-    // Create a wrapper container
-    const wrapper = document.createElement("div");
-    wrapper.style.display = "flex";
-    wrapper.style.gap = "4px";
-    wrapper.style.width = "100%";
-    
-    // Create the dropdown select
-    const sel = document.createElement("select");
-    sel.style.flex = "1";
-    sel.style.padding = "0.3rem";
-    sel.style.border = "1px solid var(--primary)";
-    sel.style.borderRadius = "4px";
-    sel.style.fontFamily = "inherit";
-    sel.style.fontSize = "0.85rem";
-    sel.innerHTML = `<option value="">-- Select or type below --</option>` + 
-      uniqueVals.map(v => `<option value="${esc(v)}" ${v===old?"selected":""}>${esc(v)}</option>`).join("");
-    
-    // Create the "new value" text input
-    const newInput = document.createElement("input");
-    newInput.type = "text";
-    newInput.placeholder = "Or type new value...";
-    newInput.style.flex = "1";
-    newInput.style.padding = "0.3rem";
-    newInput.style.border = "1px solid var(--primary)";
-    newInput.style.borderRadius = "4px";
-    newInput.style.fontFamily = "inherit";
-    newInput.style.fontSize = "0.85rem";
-    
-    // If the current value is not in the dropdown, pre-fill the input
-    if (old && !uniqueVals.includes(old)) {
-      newInput.value = old;
-      sel.value = "";
-    }
-    
-    // When user types in the input, clear the select
-    newInput.addEventListener("input", () => {
-      if (newInput.value.trim()) {
-        sel.value = "";
-      }
-    });
-    
-    // When user selects from dropdown, clear the input
-    sel.addEventListener("change", () => {
-      if (sel.value) {
-        newInput.value = "";
-      }
-    });
-    
-    wrapper.appendChild(sel);
-    wrapper.appendChild(newInput);
-    
-    cell.textContent = "";
-    cell.appendChild(wrapper);
-    
-    // Focus the select first
-    sel.focus();
-    
-    const finish = (save = true) => {
-      // Get the final value: input takes priority, then select
-      let newVal = newInput.value.trim();
-      if (!newVal) {
-        newVal = sel.value;
-      }
-      
-      wrapper.remove();
-      cell.textContent = newVal;
-      isEditing = false;
-      cell.focus();
-      if (save) saveCellEdit(cell, old, newVal);
-    };
-    
-    // Save on blur (clicking outside)
-    wrapper.addEventListener("blur", (e) => {
-      // Small delay to allow click events on select/input
-      setTimeout(() => {
-        if (!wrapper.contains(document.activeElement)) {
-          finish();
+      if (useDropdown && (field === "Category" || field === "Source")) {
+        const uniqueVals = getUniqueValues(field);
+        
+        // Create a wrapper container
+        const wrapper = document.createElement("div");
+        wrapper.style.display = "flex";
+        wrapper.style.gap = "4px";
+        wrapper.style.width = "100%";
+        
+        // Create the dropdown select
+        const sel = document.createElement("select");
+        sel.style.flex = "1";
+        sel.style.padding = "0.3rem";
+        sel.style.border = "1px solid var(--primary)";
+        sel.style.borderRadius = "4px";
+        sel.style.fontFamily = "inherit";
+        sel.style.fontSize = "0.85rem";
+        sel.innerHTML = `<option value="">-- Select or type below --</option>` + 
+          uniqueVals.map(v => `<option value="${esc(v)}" ${v===old?"selected":""}>${esc(v)}</option>`).join("");
+        
+        // Create the "new value" text input
+        const newInput = document.createElement("input");
+        newInput.type = "text";
+        newInput.placeholder = "Or type new value...";
+        newInput.style.flex = "1";
+        newInput.style.padding = "0.3rem";
+        newInput.style.border = "1px solid var(--primary)";
+        newInput.style.borderRadius = "4px";
+        newInput.style.fontFamily = "inherit";
+        newInput.style.fontSize = "0.85rem";
+        
+        // If the current value is not in the dropdown, pre-fill the input
+        if (old && !uniqueVals.includes(old)) {
+          newInput.value = old;
+          sel.value = "";
         }
-      }, 150);
-    });
-    
-    // Keyboard shortcuts
-    wrapper.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        // Cancel – restore old value
-        wrapper.remove();
-        cell.textContent = old;
+        
+        // When user types in the input, clear the select
+        newInput.addEventListener("input", () => {
+          if (newInput.value.trim()) {
+            sel.value = "";
+          }
+        });
+        
+        // When user selects from dropdown, clear the input
+        sel.addEventListener("change", () => {
+          if (sel.value) {
+            newInput.value = "";
+          }
+        });
+        
+        wrapper.appendChild(sel);
+        wrapper.appendChild(newInput);
+        
+        cell.textContent = "";
+        cell.appendChild(wrapper);
+        
+        // Focus the select first
+        sel.focus();
+        
+        const finish = (save = true) => {
+          // Get the final value: input takes priority, then select
+          let newVal = newInput.value.trim();
+          if (!newVal) {
+            newVal = sel.value;
+          }
+          
+          wrapper.remove();
+          cell.textContent = newVal;
+          isEditing = false;
+          cell.focus();
+          if (save) saveCellEdit(cell, old, newVal);
+        };
+        
+        // Save on blur (clicking outside)
+        wrapper.addEventListener("blur", (e) => {
+          setTimeout(() => {
+            if (!wrapper.contains(document.activeElement)) {
+              finish();
+            }
+          }, 150);
+        });
+        
+        // Keyboard shortcuts
+        wrapper.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            wrapper.remove();
+            cell.textContent = old;
+            isEditing = false;
+            cell.focus();
+          }
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            finish();
+          }
+          if (e.key === "Tab") {
+            e.preventDefault();
+            finish();
+          }
+        });
+        
+        return;
+      }
+
+      // Normal text editing (for other cells)
+      const inp = document.createElement("input");
+      if (useDropdown && (field === "Category" || field === "Source")) {
+        const listId = field === "Category" ? "categorySuggestionsList" : "sourceSuggestionsList";
+        inp.setAttribute("list", listId);
+      }
+      inp.value = old;
+      cell.textContent = "";
+      cell.appendChild(inp);
+      inp.focus();
+      inp.addEventListener("blur", () => {
+        const newVal = inp.value.trim();
+        inp.remove();
+        cell.textContent = newVal;
         isEditing = false;
         cell.focus();
-      }
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        finish();
-      }
-      if (e.key === "Tab") {
-        e.preventDefault();
-        finish();
-      }
-    });
-    
-    return;
-  }
-
-  // Normal text editing (unchanged)
-  const inp = document.createElement("input");
-  if (useDropdown && (field === "Category" || field === "Source")) {
-    const listId = field === "Category" ? "categorySuggestionsList" : "sourceSuggestionsList";
-    inp.setAttribute("list", listId);
-  }
-  inp.value = old;
-  cell.textContent = "";
-  cell.appendChild(inp);
-  inp.focus();
-  inp.addEventListener("blur", () => {
-    const newVal = inp.value.trim();
-    inp.remove();
-    cell.textContent = newVal;
-    isEditing = false;
-    cell.focus();
-    saveCellEdit(cell, old, newVal);
-  });
-  inp.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { inp.remove(); cell.textContent = old; isEditing = false; cell.focus(); }
-  });
-}
+        saveCellEdit(cell, old, newVal);
+      });
+      inp.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { inp.remove(); cell.textContent = old; isEditing = false; cell.focus(); }
+      });
+    }
 
     async function saveCellEdit(cell, oldValue, newValue) {
       if (newValue === oldValue) return;
@@ -619,7 +617,7 @@ async function beginEdit(cell, useDropdown) {
       }
     }
 
-    // ----- Internal Clipboard (Copy/Cut/Paste) – NO field matching restriction -----
+    // ----- Internal Clipboard (Copy/Cut/Paste) – cross-column paste allowed -----
     function copySelection() {
       if (selectedCells.size===0) return;
       const sorted = Array.from(selectedCells).sort((a,b)=>parseInt(a.dataset.row)-parseInt(b.dataset.row)||parseInt(a.dataset.col)-parseInt(b.dataset.col));
@@ -655,45 +653,35 @@ async function beginEdit(cell, useDropdown) {
         const rowData = clipboard[i];
         for (let j=0; j<rowData.length; j++) {
           const {value, isId} = rowData[j];
-          if (isId) continue;   // never paste over a Document ID cell
+          if (isId) continue;
           const tr = startRow + i, tc = startCol + j;
           const tCell = table.querySelector(`tr[data-row="${tr}"] td[data-col="${tc}"]`);
           if (tCell && tCell.classList.contains("editable-cell")) {
-            // Previously we insisted tCell.dataset.field === field – REMOVED.
-            // Now any editable cell can receive the paste.
             tCell.textContent = value;
             const field = tCell.dataset.field;
             const docId = tCell.dataset.docId;
             try {
               await updateDoc(doc(db, collName, docId), { [field]: value });
-            } catch (e) {
-              // silently ignore write errors; the cell still shows the new value
-            }
+            } catch (e) {}
             updatedCount++;
           }
         }
       }
-
-      // If this was a cut operation, clear the source cells
       if (isCutting) {
         for (const c of cutCells) {
-          c.textContent = "";
-          c.classList.remove("cell-cut");
+          c.textContent = ""; c.classList.remove("cell-cut");
           const field = c.dataset.field;
           const docId = c.dataset.docId;
           try {
             await updateDoc(doc(db, collName, docId), { [field]: "" });
           } catch (e) {}
         }
-        cutCells.clear();
-        isCutting = false;
-        clipboard = null;
+        cutCells.clear(); isCutting=false; clipboard=null;
       }
-
       showToast(updatedCount === 0 ? "No cells pasted" : `Pasted ${updatedCount} cell(s)`);
     }
 
-    // ----- Context Menu (unchanged) -----
+    // ----- Context Menu -----
     function hideContextMenu() { contextMenu.style.display = "none"; }
     document.addEventListener("contextmenu", (e) => {
       const cell = e.target.closest(".editable-cell,.doc-id-cell");
@@ -741,7 +729,7 @@ async function beginEdit(cell, useDropdown) {
     });
     document.addEventListener("click", (e) => { if (!contextMenu.contains(e.target)) hideContextMenu(); });
 
-    // Keyboard shortcuts (unchanged)
+    // Keyboard shortcuts
     document.addEventListener("keydown", (e) => {
       if (isEditing || e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
       if (e.ctrlKey && e.key==="c") { e.preventDefault(); copySelection(); }
@@ -753,7 +741,7 @@ async function beginEdit(cell, useDropdown) {
       }
     });
 
-    // ----- Row‑level operations (no per‑row buttons) -----
+    // ----- Row‑level operations -----
     async function deleteSelectedRows() {
       const checkboxes = document.querySelectorAll(".row-checkbox:checked");
       if (checkboxes.length === 0) {
@@ -775,7 +763,6 @@ async function beginEdit(cell, useDropdown) {
       loadTable();
     }
 
-    // Add row (unchanged)
     async function addRow() {
       const fields = collectionsMap[currentCollection].fields;
       const nextId = await getNextId();
@@ -785,7 +772,6 @@ async function beginEdit(cell, useDropdown) {
       } catch (err) { showToast("Error: "+err.message); }
     }
 
-    // Form (unchanged)
     function showForm() {
       const fields = collectionsMap[currentCollection].fields;
       let formHtml = `<h3>Add ${currentCollection}</h3><div class="form-card">`;
@@ -855,7 +841,7 @@ async function beginEdit(cell, useDropdown) {
       })();
     }
 
-    // ----- External Paste Modal (unchanged) -----
+    // External Paste Modal
     document.getElementById("cancelPasteBtn").addEventListener("click", () => externalPasteModal.classList.add("hidden"));
     document.getElementById("submitPasteBtn").addEventListener("click", async () => {
       const text = document.getElementById("pasteTextarea").value.trim();
@@ -884,7 +870,7 @@ async function beginEdit(cell, useDropdown) {
       loadTable();
     });
 
-    // ----- Tab switching -----
+    // Tab switching
     tabBar.addEventListener("click", (e) => {
       if (e.target.tagName !== "BUTTON") return;
       tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
@@ -898,19 +884,6 @@ async function beginEdit(cell, useDropdown) {
     document.querySelectorAll(".modal-overlay").forEach(modal => {
       modal.addEventListener("click", (e) => { if (e.target === modal) modal.classList.add("hidden"); });
     });
-
-    // Optional datalist setup (unchanged)
-    function setupDropdownForField(datalistId, fieldName, fieldSelector) {
-      const uniqueVals = getUniqueValues(fieldName);
-      if (!uniqueVals.length) return;
-      let datalistEl = document.getElementById(datalistId);
-      if (!datalistEl) {
-        datalistEl = document.createElement("datalist");
-        datalistEl.id = datalistId;
-        document.body.appendChild(datalistEl);
-      }
-      datalistEl.innerHTML = uniqueVals.map(v => `<option value="${esc(v)}">`).join("");
-    }
   </script>
 </body>
 </html>
