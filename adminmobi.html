@@ -14,7 +14,7 @@
     body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height:100vh; }
     .hidden { display: none !important; }
 
-    /* Login & Dashboard – centered, max width for larger screens */
+    /* Login & Dashboard – centered, narrow on mobile */
     #loginScreen, #dashboard { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:1rem; }
 
     .card { background: var(--card-bg); border-radius: var(--radius); padding:1.5rem; box-shadow: var(--shadow); width:100%; max-width:500px; }
@@ -23,7 +23,7 @@
     h1 { color: var(--primary); text-align:center; margin-bottom:0.8rem; font-size:2rem; }
     input, button, select, textarea { font-family:inherit; }
 
-    /* Inputs – bigger for fingers */
+    /* Bigger inputs for fingers */
     input[type="email"], input[type="password"], input[type="text"] {
       width:100%; padding:0.9rem 1rem; border:1px solid #ddd; border-radius:12px; margin-bottom:0.8rem;
       font-size:1rem; background:white;
@@ -74,11 +74,11 @@
     .editable-cell { background:#fcfaf7; cursor:cell; user-select:none; }
     .doc-id-cell { background:#f4f4f4; color:#555; font-weight:500; cursor:cell; user-select:none; }
     .editable-cell input, .editable-cell select {
-      width:100%; padding:0.4rem; border:1px solid var(--primary); border-radius:4px;
-      font-family:inherit; font-size:0.9rem; overflow:visible; text-overflow:clip; background:white;
+      width:100%; padding:0.5rem; border:2px solid var(--primary); border-radius:6px;
+      font-family:inherit; font-size:1rem; overflow:visible; text-overflow:clip; background:white;
     }
-    .checkbox-cell { width: 40px; text-align: center; }
-    input[type="checkbox"] { transform: scale(1.3); margin: 0.3rem; }
+    .checkbox-cell { width: 44px; text-align: center; }
+    input[type="checkbox"] { transform: scale(1.4); margin: 0.4rem; }
 
     .spinner {
       width:40px; height:40px; border:4px solid rgba(91,122,140,0.2);
@@ -109,7 +109,7 @@
     .form-card label { display:block; margin-top:1rem; font-weight:600; font-size:1rem; }
     .form-card input, .form-card textarea { width:100%; padding:0.7rem; margin-top:0.3rem; border:1px solid #ddd; border-radius:8px; }
 
-    /* Modals – full‑screen on mobile */
+    /* Modals */
     .modal-overlay {
       position:fixed; top:0; left:0; right:0; bottom:0;
       background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center;
@@ -185,7 +185,7 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <!-- Modals (same as desktop, but mobile‑friendly by default via CSS) -->
+  <!-- Modals (same as desktop, mobile friendly by CSS) -->
   <div id="linkWizardModal" class="modal-overlay hidden">
     <div class="modal-box"><div id="linkWizardContent"></div></div>
   </div>
@@ -214,6 +214,7 @@
     </div>
   </div>
   <div id="contextMenu" class="context-menu">
+    <div class="menu-item" data-action="edit">✏️ Edit</div>
     <div class="menu-item" data-action="copy">📋 Copy</div>
     <div class="menu-item" data-action="cut">✂️ Cut</div>
     <div class="menu-item" data-action="paste">📋 Paste</div>
@@ -437,26 +438,27 @@
       document.addEventListener("mousemove", move); document.addEventListener("mouseup", up);
     }
 
+    // ----- Cell behaviours – improved for touch -----
     function attachCellBehaviours() {
       const cells = tableContainer.querySelectorAll(".editable-cell, .doc-id-cell");
       cells.forEach(cell => {
         cell.addEventListener("mousedown", onCellPointerDown);
         cell.addEventListener("touchstart", onCellPointerDown, { passive: false });
+        // Tap on an already-selected editable cell -> start editing
         if (cell.classList.contains("editable-cell")) {
-          cell.addEventListener("dblclick", () => {
-            const field = cell.dataset.field;
-            if ((field === "Category" || field === "Source") && currentCollection === "product") beginEdit(cell, true);
-            else beginEdit(cell, false);
-          });
-          cell.addEventListener("keydown", (e) => {
-            if (isEditing) return;
-            if (e.key === "Enter" || e.key === "F2") {
-              e.preventDefault();
-              const field = cell.dataset.field;
-              if ((field === "Category" || field === "Source") && currentCollection === "product") beginEdit(cell, true);
-              else beginEdit(cell, false);
-            } else if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) {
-              e.preventDefault(); moveFocus(e.key, cell);
+          cell.addEventListener("click", (e) => {
+            // If this cell is currently the only selected cell, start editing (like spreadsheets)
+            if (!isEditing && selectedCells.has(cell) && selectedCells.size === 1) {
+              // Avoid triggering when dragging or selecting multiple cells
+              // Set a flag to avoid immediate edit after a drag
+              if (!isDragging) {
+                const field = cell.dataset.field;
+                if ((field === "Category" || field === "Source") && currentCollection === "product") {
+                  beginEdit(cell, true);
+                } else {
+                  beginEdit(cell, false);
+                }
+              }
             }
           });
         }
@@ -469,8 +471,12 @@
 
     function onCellPointerDown(e) {
       if (isEditing) return;
+      // Prevent scrolling only if we intend to select a cell? Better to always prevent to avoid text selection
       e.preventDefault();
       const cell = e.currentTarget;
+      // Explicitly focus the cell so keyboard events work later
+      if (cell.focus) cell.focus();
+
       const ctrl = e.ctrlKey||e.metaKey, shift = e.shiftKey;
       if (shift && lastSelectionAnchor) {
         clearSelection();
@@ -513,17 +519,7 @@
       return cells;
     }
 
-    function moveFocus(key, cell) {
-      const r=parseInt(cell.dataset.row), c=parseInt(cell.dataset.col); let nr=r, nc=c;
-      if (key==="ArrowUp") nr = Math.max(0, r-1);
-      else if (key==="ArrowDown") nr = r+1;
-      else if (key==="ArrowLeft") nc = Math.max(0, c-1);
-      else if (key==="ArrowRight") nc = c+1;
-      const target = document.querySelector(`#data-table tr[data-row="${nr}"] td[data-col="${nc}"]`);
-      if (target) { target.focus(); clearSelection(); addToSelection(target); lastSelectionAnchor=target; }
-    }
-
-    // ----- Edit with Dropdown (Category/Source) – "+ Add new" via prompt (ONE prompt only) -----
+    // ----- Edit with Dropdown (Category/Source) – mobile friendly -----
     async function beginEdit(cell, useDropdown) {
       if (isEditing || !cell.classList.contains("editable-cell")) return;
       isEditing = true;
@@ -553,7 +549,6 @@
         sel.focus();
 
         let promptShown = false;
-
         const finish = async (save = true) => {
           let newVal = sel.value;
           if (newVal === "__add_new__" && !promptShown) {
@@ -665,7 +660,7 @@
       if (clipboard) {
         isCutting = true;
         selectedCells.forEach(c => { c.classList.add("cell-cut"); cutCells.add(c); });
-        showToast("Cut – paste to apply");
+        showToast("Cut – tap target cell & paste");
       }
     }
     async function pasteSelection(targetCell) {
@@ -702,18 +697,14 @@
       showToast(updatedCount === 0 ? "No cells pasted" : `Pasted ${updatedCount} cell(s)`);
     }
 
-    // ----- Context Menu & Keyboard -----
+    // ----- Context Menu (now works with touch long-press) -----
     function hideContextMenu() { contextMenu.style.display = "none"; }
     document.addEventListener("contextmenu", (e) => {
       const cell = e.target.closest(".editable-cell,.doc-id-cell");
       if (!cell) return;
       e.preventDefault();
       if (!selectedCells.has(cell)) { clearSelection(); addToSelection(cell); lastSelectionAnchor = cell; }
-      contextMenu.style.display = "block";
-      contextMenu.style.left = Math.min(e.clientX, window.innerWidth-180) + "px";
-      contextMenu.style.top = Math.min(e.clientY, window.innerHeight-200) + "px";
-      contextMenu.dataset.targetRow = cell.dataset.row; contextMenu.dataset.targetCol = cell.dataset.col;
-      contextMenu.querySelector('[data-action="paste"]').classList.toggle("disabled", !clipboard);
+      showContextMenuAt(e.clientX, e.clientY, cell);
     });
     let longPressTimer;
     document.addEventListener("touchstart", (e) => {
@@ -723,28 +714,52 @@
         e.preventDefault();
         if (!selectedCells.has(cell)) { clearSelection(); addToSelection(cell); lastSelectionAnchor = cell; }
         const rect = cell.getBoundingClientRect();
-        contextMenu.style.display = "block";
-        contextMenu.style.left = Math.min(rect.left, window.innerWidth-180) + "px";
-        contextMenu.style.top = Math.min(rect.bottom+6, window.innerHeight-200) + "px";
-        contextMenu.dataset.targetRow = cell.dataset.row; contextMenu.dataset.targetCol = cell.dataset.col;
-        contextMenu.querySelector('[data-action="paste"]').classList.toggle("disabled", !clipboard);
+        showContextMenuAt(rect.left, rect.bottom + 6, cell);
       }, 600);
     }, {passive:true});
     document.addEventListener("touchend", () => clearTimeout(longPressTimer));
     document.addEventListener("touchmove", () => clearTimeout(longPressTimer));
+
+    function showContextMenuAt(x, y, cell) {
+      contextMenu.style.display = "block";
+      contextMenu.style.left = Math.min(x, window.innerWidth-180) + "px";
+      contextMenu.style.top = Math.min(y, window.innerHeight-220) + "px";
+      contextMenu.dataset.targetRow = cell.dataset.row;
+      contextMenu.dataset.targetCol = cell.dataset.col;
+      contextMenu.querySelector('[data-action="paste"]').classList.toggle("disabled", !clipboard);
+    }
+
     contextMenu.addEventListener("click", (e) => {
       const item = e.target.closest(".menu-item"); if (!item) return;
       hideContextMenu();
       const action = item.dataset.action;
-      if (action==="copy") copySelection();
-      else if (action==="cut") cutSelection();
-      else if (action==="paste") {
+      if (action === "edit") {
+        // Find the first selected editable cell and start editing
+        for (const cell of selectedCells) {
+          if (cell.classList.contains("editable-cell")) {
+            const field = cell.dataset.field;
+            if ((field === "Category" || field === "Source") && currentCollection === "product") {
+              beginEdit(cell, true);
+            } else {
+              beginEdit(cell, false);
+            }
+            break;
+          }
+        }
+      } else if (action === "copy") copySelection();
+      else if (action === "cut") cutSelection();
+      else if (action === "paste") {
         const r = parseInt(contextMenu.dataset.targetRow), c = parseInt(contextMenu.dataset.targetCol);
         const t = document.getElementById("data-table");
-        if (t && !isNaN(r) && !isNaN(c)) { const target = t.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`); if (target) pasteSelection(target); }
-      } else if (action==="clear-selection") clearSelection();
+        if (t && !isNaN(r) && !isNaN(c)) {
+          const target = t.querySelector(`tr[data-row="${r}"] td[data-col="${c}"]`);
+          if (target) pasteSelection(target);
+        }
+      } else if (action === "clear-selection") clearSelection();
     });
     document.addEventListener("click", (e) => { if (!contextMenu.contains(e.target)) hideContextMenu(); });
+
+    // Keyboard shortcuts (still work if external keyboard)
     document.addEventListener("keydown", (e) => {
       if (isEditing || e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA") return;
       if (e.ctrlKey && e.key==="c") { e.preventDefault(); copySelection(); }
@@ -791,7 +806,7 @@
       });
     }
 
-    // ----- Link Wizard (fully restored) -----
+    // ----- Link Wizard (unchanged) -----
     function openLinkWizard() {
       linkWizardModal.classList.remove("hidden");
       const mapColl = collectionsMap[currentCollection], parentColl = mapColl.parentCollection, parentField = mapColl.parentIdField;
