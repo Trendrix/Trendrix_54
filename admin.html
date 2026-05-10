@@ -55,6 +55,17 @@
     .modal-box { background:#fff; border-radius:16px; padding:1.5rem; max-width:700px; width:95%; max-height:90vh; overflow-y:auto; box-shadow:0 10px 40px rgba(0,0,0,0.2); }
     .modal-box h2 { margin-bottom:1rem; color:var(--primary); }
     .link-actions { display:flex; gap:0.5rem; justify-content:flex-end; }
+    .parent-list { display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1rem; }
+    .parent-item { background:#f0f4f7; border-radius:8px; padding:0.6rem 1rem; cursor:pointer; display:flex; align-items:center; gap:0.5rem; }
+    .parent-item.selected { outline:2px solid var(--primary); background:#e6eff3; }
+    .parent-item img { width:40px; height:40px; object-fit:cover; border-radius:4px; background:#ddd; }
+    .product-check-list { display:flex; flex-direction:column; gap:0.4rem; margin-bottom:1rem; }
+    .product-check-item { display:flex; align-items:center; gap:0.5rem; }
+    .product-check-item img { width:40px; height:40px; object-fit:cover; border-radius:4px; }
+    .product-check-item label { font-size:0.9rem; }
+    .doc-list-simple { display:flex; flex-direction:column; gap:0.3rem; }
+    .doc-list-simple .doc-item { padding:0.5rem 1rem; border:1px solid #e0e0e0; border-radius:6px; cursor:pointer; }
+    .doc-list-simple .doc-item.selected { background:#e6eff3; border-color:var(--primary); }
     .cell-selected { background:#c3e0f4 !important; outline:1px solid var(--primary); }
     .cell-cut { background:#f0f0f0 !important; color:#999; text-decoration:line-through; }
     .context-menu { display:none; position:fixed; background:white; border:1px solid #ccc; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:3000; min-width:150px; padding:0.3rem 0; }
@@ -99,10 +110,11 @@
     <div class="toast" id="toast"></div>
   </div>
 
-  <!-- Modals -->
+  <!-- Link Wizard Modal -->
   <div id="linkWizardModal" class="modal-overlay hidden">
     <div class="modal-box"><div id="linkWizardContent"></div></div>
   </div>
+  <!-- Copy To Modal -->
   <div id="copyToModal" class="modal-overlay hidden">
     <div class="modal-box">
       <h2>📤 Copy to Existing Row</h2>
@@ -114,6 +126,7 @@
       </div>
     </div>
   </div>
+  <!-- External Paste Modal -->
   <div id="externalPasteModal" class="modal-overlay hidden">
     <div class="modal-box">
       <h2>📋 Paste Tab‑Separated Data</h2>
@@ -127,7 +140,7 @@
       </div>
     </div>
   </div>
-  <!-- Context Menu (for cell copy/cut/paste) -->
+  <!-- Context Menu -->
   <div id="contextMenu" class="context-menu">
     <div class="menu-item" data-action="copy">📋 Copy</div>
     <div class="menu-item" data-action="cut">✂️ Cut</div>
@@ -338,7 +351,6 @@
       addColumnResize();
       attachCellBehaviours();
 
-      // Bind controls
       document.getElementById("recordsPerPageSelect")?.addEventListener("change", (e) => {
         recordsPerPage = parseInt(e.target.value); currentPage = 1; renderTable();
       });
@@ -481,13 +493,12 @@
       if (useDropdown && (field === "Category" || field === "Source")) {
         const uniqueVals = getUniqueValues(field);
         
-        // Create a wrapper container
         const wrapper = document.createElement("div");
         wrapper.style.display = "flex";
         wrapper.style.gap = "4px";
         wrapper.style.width = "100%";
+        wrapper.classList.add("dropdown-edit-wrapper");
         
-        // Create the dropdown select
         const sel = document.createElement("select");
         sel.style.flex = "1";
         sel.style.padding = "0.3rem";
@@ -498,7 +509,6 @@
         sel.innerHTML = `<option value="">-- Select or type below --</option>` + 
           uniqueVals.map(v => `<option value="${esc(v)}" ${v===old?"selected":""}>${esc(v)}</option>`).join("");
         
-        // Create the "new value" text input
         const newInput = document.createElement("input");
         newInput.type = "text";
         newInput.placeholder = "Or type new value...";
@@ -509,42 +519,23 @@
         newInput.style.fontFamily = "inherit";
         newInput.style.fontSize = "0.85rem";
         
-        // If the current value is not in the dropdown, pre-fill the input
         if (old && !uniqueVals.includes(old)) {
           newInput.value = old;
           sel.value = "";
         }
         
-        // When user types in the input, clear the select
-        newInput.addEventListener("input", () => {
-          if (newInput.value.trim()) {
-            sel.value = "";
-          }
-        });
-        
-        // When user selects from dropdown, clear the input
-        sel.addEventListener("change", () => {
-          if (sel.value) {
-            newInput.value = "";
-          }
-        });
+        newInput.addEventListener("input", () => { if (newInput.value.trim()) sel.value = ""; });
+        sel.addEventListener("change", () => { if (sel.value) newInput.value = ""; });
         
         wrapper.appendChild(sel);
         wrapper.appendChild(newInput);
-        
         cell.textContent = "";
         cell.appendChild(wrapper);
-        
-        // Focus the select first
         sel.focus();
         
         const finish = (save = true) => {
-          // Get the final value: input takes priority, then select
           let newVal = newInput.value.trim();
-          if (!newVal) {
-            newVal = sel.value;
-          }
-          
+          if (!newVal) newVal = sel.value;
           wrapper.remove();
           cell.textContent = newVal;
           isEditing = false;
@@ -552,16 +543,6 @@
           if (save) saveCellEdit(cell, old, newVal);
         };
         
-        // Save on blur (clicking outside)
-        wrapper.addEventListener("blur", (e) => {
-          setTimeout(() => {
-            if (!wrapper.contains(document.activeElement)) {
-              finish();
-            }
-          }, 150);
-        });
-        
-        // Keyboard shortcuts
         wrapper.addEventListener("keydown", (e) => {
           if (e.key === "Escape") {
             wrapper.remove();
@@ -604,6 +585,15 @@
         if (e.key === "Escape") { inp.remove(); cell.textContent = old; isEditing = false; cell.focus(); }
       });
     }
+
+    // Auto‑finish dropdown editing when user clicks outside the edit area
+    document.addEventListener("mousedown", function(e) {
+      if (!isEditing) return;
+      const editingWrapper = document.querySelector(".dropdown-edit-wrapper");
+      if (editingWrapper && !editingWrapper.contains(e.target)) {
+        editingWrapper.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      }
+    }, true);
 
     async function saveCellEdit(cell, oldValue, newValue) {
       if (newValue === oldValue) return;
@@ -792,7 +782,7 @@
       });
     }
 
-    // Link Wizard (unchanged)
+    // ----- Link Wizard (unchanged) -----
     function openLinkWizard() {
       linkWizardModal.classList.remove("hidden");
       const mapColl = collectionsMap[currentCollection], parentColl = mapColl.parentCollection, parentField = mapColl.parentIdField;
@@ -841,7 +831,7 @@
       })();
     }
 
-    // External Paste Modal
+    // ----- External Paste Modal -----
     document.getElementById("cancelPasteBtn").addEventListener("click", () => externalPasteModal.classList.add("hidden"));
     document.getElementById("submitPasteBtn").addEventListener("click", async () => {
       const text = document.getElementById("pasteTextarea").value.trim();
@@ -870,7 +860,7 @@
       loadTable();
     });
 
-    // Tab switching
+    // ----- Tab switching -----
     tabBar.addEventListener("click", (e) => {
       if (e.target.tagName !== "BUTTON") return;
       tabBar.querySelectorAll("button").forEach(b => b.classList.remove("active"));
